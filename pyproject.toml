@@ -1,0 +1,169 @@
+[build-system]
+requires = ["setuptools", "toml"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iteso-humanoid"
+version = "1.1.0"
+description = "Workspace for the development of the ITESO Humanoid Robot"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "torch>=2.2.0",
+  "torchvision",
+  "isaacsim[all,extscache]==5.1.0; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "isaacsim-core==5.1.0.0; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "isaaclab[isaacsim,all]==2.3.2.post1; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "numpy",
+  "omegaconf",
+  "mujoco",
+  "onnxruntime",
+  "cc.udp",
+  "inputs",
+  "pyaml",
+  "meshcat",
+  "meshcat_shapes",
+  "scipy",
+  "pin",
+  "pin-pink",
+  "qpsolvers[quadprog]",
+  "loop_rate_limiters",
+]
+
+[project.optional-dependencies]
+assets = [
+  "onshape-to-robot",
+  "pymeshlab==2023.12.post3",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+environments = [
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "sys_platform == 'darwin'",
+]
+
+[tool.uv.extra-build-dependencies]
+flatdict = ["setuptools<81"]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch", marker = "sys_platform == 'linux'" },
+]
+isaacsim = { index = "nvidia" }
+isaaclab = { index = "nvidia" }
+isaacsim-kernel = { index = "nvidia" }
+isaacsim-app = { index = "nvidia" }
+isaacsim-asset = { index = "nvidia" }
+isaacsim-benchmark = { index = "nvidia" }
+isaacsim-code-editor = { index = "nvidia" }
+isaacsim-core = { index = "nvidia" }
+isaacsim-cortex = { index = "nvidia" }
+isaacsim-example = { index = "nvidia" }
+isaacsim-gui = { index = "nvidia" }
+isaacsim-replicator = { index = "nvidia" }
+isaacsim-rl = { index = "nvidia" }
+isaacsim-robot = { index = "nvidia" }
+isaacsim-robot-motion = { index = "nvidia" }
+isaacsim-robot-setup = { index = "nvidia" }
+isaacsim-ros1 = { index = "nvidia" }
+isaacsim-ros2 = { index = "nvidia" }
+isaacsim-sensor = { index = "nvidia" }
+isaacsim-storage = { index = "nvidia" }
+isaacsim-template = { index = "nvidia" }
+isaacsim-test = { index = "nvidia" }
+isaacsim-utils = { index = "nvidia" }
+isaacsim-extscache-kit = { index = "nvidia" }
+isaacsim-extscache-kit-sdk = { index = "nvidia" }
+isaacsim-extscache-physics = { index = "nvidia" }
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 120
+py_version = 311
+skip_glob = ["docs/*", "logs/*"]
+group_by_package = true
+sections = [
+  "FUTURE",
+  "STDLIB",
+  "THIRDPARTY",
+  "ISAACLABPARTY",
+  "FIRSTPARTY",
+  "LOCALFOLDER",
+]
+extra_standard_library = [
+  "numpy",
+  "h5py",
+  "open3d",
+  "torch",
+  "tensordict",
+  "bpy",
+  "matplotlib",
+  "gymnasium",
+  "gym",
+  "scipy",
+  "hid",
+  "yaml",
+  "prettytable",
+  "toml",
+  "trimesh",
+  "tqdm",
+  "psutil",
+]
+known_thirdparty = [
+  "isaacsim.core.api",
+  "omni.replicator.core",
+  "pxr",
+  "omni.kit.*",
+  "warp",
+  "carb",
+  "Semantics",
+]
+known_isaaclabparty = [
+  "isaaclab",
+  "isaaclab_tasks",
+  "isaaclab_assets",
+  "isaaclab_mimic",
+  "isaaclab_rl",
+]
+known_firstparty = "berkeley_humanoid_lite"
+known_local_folder = "config"
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__",
+  "**/docs",
+  "**/logs",
+  ".git",
+  ".vscode",
+]
+typeCheckingMode = "basic"
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
+enableTypeIgnoreComments = true
+
+# Ignore missing imports and stubs for CI pre-commit
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportGeneralTypeIssues = "none"
+reportOptionalMemberAccess = "warning"
+reportPrivateUsage = "warning"

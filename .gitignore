@@ -1,0 +1,135 @@
+# ==============================================================================
+# Byte-compiled / Python Cache & Protobuf
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pb
+
+# ==============================================================================
+# Virtual Environments & Packaging
+# ==============================================================================
+.env
+.venv/
+env/
+venv/
+ENV/
+*.bak/
+build/
+dist/
+develop-eggs/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==============================================================================
+# Testing, Coverage & Linters
+# ==============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+htmlcov/
+.hypothesis/
+.tox/
+.nox/
+*.cover
+*.py,cover
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ==============================================================================
+# IDEs & Operating System
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+
+# VS Code (ignore workspace state but preserve configuration files)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ==============================================================================
+# Jupyter Notebooks & IPython
+# ==============================================================================
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+# ==============================================================================
+# Documentation Builds
+# ==============================================================================
+docs/_build/
+site/
+
+# ==============================================================================
+# Simulation, Training Outputs & Logs
+# ==============================================================================
+runs/
+**/runs/*
+logs/
+**/logs/*
+recordings/
+**/recordings/*
+output/
+outputs/
+**/output/*
+**/outputs/*
+videos/
+**/videos/*
+wandb/
+**/wandb/*
+.neptune/
+**/.neptune/*
+docker/artifacts/
+*.log
+*.tmp
+
+# ==============================================================================
+# Isaac Sim, Omniverse & CAD Export Artifacts
+# ==============================================================================
+_isaac_sim*
+_repo
+_build
+.lastformat
+**/*.dmp
+**/.thumbs
+
+# Omniverse USD generated files
+**/usd/Props/
+**/usd/.asset_hash
+**/usd/config.yaml
+
+# Onshape export temporary assets (does not ignore tracked src/assets)
+**/urdf/assets/
+
+# Project assets (e.g. CAD exports, textures) and other large files (does not ignore tracked src/assets)
+assets/*
+models/*
