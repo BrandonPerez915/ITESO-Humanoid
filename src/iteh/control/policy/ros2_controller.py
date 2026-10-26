@@ -8,9 +8,11 @@ Subscribes to:
   - /robot_mode (std_msgs/msg/Int32, optional): Control modes (1: IDLE, 2: INIT, 3: RL_RUNNING).
 """
 
+from __future__ import annotations
+
 import time
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 # Check if native rclpy is available
 try:
@@ -20,8 +22,24 @@ try:
     from geometry_msgs.msg import Twist
     from std_msgs.msg import Int32
     RCLPY_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     RCLPY_AVAILABLE = False
+    class Node:  # type: ignore
+        def __init__(self, *args: Any, **kwargs: Any) -> None: pass
+        def create_subscription(self, *args: Any, **kwargs: Any) -> Any: pass
+    class Twist:  # type: ignore
+        def __init__(self) -> None:
+            self.linear = type("Vector3", (), {"x": 0.0, "y": 0.0, "z": 0.0})()
+            self.angular = type("Vector3", (), {"x": 0.0, "y": 0.0, "z": 0.0})()
+    class Int32:  # type: ignore
+        def __init__(self) -> None:
+            self.data: int = 0
+    class QoSProfile:  # type: ignore
+        def __init__(self, *args: Any, **kwargs: Any) -> None: pass
+    class ReliabilityPolicy:  # type: ignore
+        BEST_EFFORT = 1
+    class HistoryPolicy:  # type: ignore
+        KEEP_LAST = 1
 
 # Check if roslibpy is available (WebSocket bridge fallback, e.g. for macOS with Docker/Remote ROS 2)
 try:

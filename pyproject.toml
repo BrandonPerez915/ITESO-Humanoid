@@ -145,10 +145,15 @@ known_isaaclabparty = [
   "isaaclab_mimic",
   "isaaclab_rl",
 ]
-known_firstparty = "berkeley_humanoid_lite"
+known_firstparty = "iteh"
 known_local_folder = "config"
 
 [tool.pyright]
+extraPaths = [
+  "src",
+  ".venv/lib/python3.11/site-packages",
+  ".venv/lib/python3.11/site-packages/cmeel.prefix/lib/python3.11/site-packages",
+]
 exclude = [
   "**/__pycache__",
   "**/docs",
@@ -165,5 +170,6 @@ enableTypeIgnoreComments = true
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportGeneralTypeIssues = "none"
+reportAttributeAccessIssue = "none"
 reportOptionalMemberAccess = "warning"
-reportPrivateUsage = "warning"
+reportPrivateUsage = "none"

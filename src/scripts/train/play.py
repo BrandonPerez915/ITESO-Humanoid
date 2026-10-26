@@ -49,21 +49,19 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 import sys
 from pathlib import Path
 
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
+# Standardize path bootstrap
+_repo_root = Path(__file__).resolve()
+while _repo_root.parent != _repo_root:
+    if (_repo_root / "pyproject.toml").exists() or (_repo_root / "src" / "iteh").exists():
+        break
+    _repo_root = _repo_root.parent
+
+for _path in [str(_repo_root), str(_repo_root / "src")]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
 # Import extensions to set up environment tasks
-try:
-    import bhl.tasks  # noqa: F401
-except ImportError:
-    try:
-        import src.iteh.tasks  # noqa: F401
-    except ImportError:
-        import tasks  # noqa: F401
+import iteh.tasks  # noqa: F401
 
 
 def main():

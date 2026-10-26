@@ -7,22 +7,24 @@ from pathlib import Path
 import shutil
 
 
+from iteh.common.paths import MJCF_DIR, SCAD_DIR, ASSETS_DIR, REPO_ROOT
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Script to generate URDF file from onshape CAD project.",
+        description="Script to generate MJCF file from onshape CAD project.",
     )
     parser.add_argument(
         "--config",
         type=str,
         help="Path to the config file.",
-        default="src/assets/mjcf/config.json",
+        default=str(MJCF_DIR / "config.json"),
     )
     args = parser.parse_args()
 
     # check if the config file exists
     config_file_path = Path(args.config)
     if not config_file_path.exists():
-        fallback_path = Path(__file__).resolve().parents[1] / "assets" / "mjcf" / "config.json"
+        fallback_path = MJCF_DIR / "config.json"
         if fallback_path.exists():
             config_file_path = fallback_path
         else:
@@ -31,7 +33,7 @@ if __name__ == "__main__":
     robot_name = json.load(open(config_file_path))["output_filename"]
     mjcf_dir = config_file_path.parent
     robot_dir = mjcf_dir.parent
-    scad_dir = robot_dir / "scad"
+    scad_dir = SCAD_DIR if SCAD_DIR.exists() else robot_dir / "scad"
 
     # copy all the predefined scad files to the mjcf assets directory
     # for onshape-to-robot to generate custom colliders

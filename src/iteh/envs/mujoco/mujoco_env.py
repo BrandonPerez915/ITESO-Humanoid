@@ -131,8 +131,9 @@ class MujocoSimulator(MujocoEnv):
 
     def _key_callback(self, keycode: int) -> None:
         """Forward MuJoCo viewer keyboard events to controller if supported."""
-        if hasattr(self.command_controller, "handle_key"):
-            self.command_controller.handle_key(keycode)
+        handle_key = getattr(self.command_controller, "handle_key", None)
+        if callable(handle_key):
+            handle_key(keycode)
 
     def reset(self) -> torch.Tensor:
         """Reset the simulation environment to initial state.

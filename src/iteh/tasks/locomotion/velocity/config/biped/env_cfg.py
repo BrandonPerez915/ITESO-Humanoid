@@ -11,10 +11,7 @@ from isaaclab.utils import configclass
 
 from ... import mdp
 from ...velocity_env_cfg import LocomotionVelocityEnvCfg
-try:
-    from iteh.envs.isaac import HUMANOID_LITE_BIPED_CFG, HUMANOID_LITE_LEG_JOINTS
-except ImportError:
-    from berkeley_humanoid_lite import HUMANOID_LITE_BIPED_CFG, HUMANOID_LITE_LEG_JOINTS
+from iteh.envs.isaac import HUMANOID_LITE_BIPED_CFG, HUMANOID_LITE_LEG_JOINTS
 
 
 ##

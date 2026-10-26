@@ -4,40 +4,35 @@ import json
 import time
 import os
 
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
+import sys
+from pathlib import Path
+import json
+import time
+import os
+
+# Standardize path bootstrap
+_repo_root = Path(__file__).resolve()
+while _repo_root.parent != _repo_root:
+    if (_repo_root / "pyproject.toml").exists() or (_repo_root / "src" / "iteh").exists():
+        break
+    _repo_root = _repo_root.parent
+
+for _path in [str(_repo_root), str(_repo_root / "src")]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-try:
-    from bhl.control import recoil
-    from bhl.control.robot import Humanoid
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-        from src.control.robot import Humanoid
-    except ImportError:
-        from control import recoil
-        from control.robot import Humanoid
+from iteh.common.paths import REPO_ROOT, SRC_DIR, get_config_path
+from iteh.control import recoil
+from iteh.control.robot import Humanoid
 
-_config_file = "motor_configuration.json"
-if not os.path.exists(_config_file):
-    for _candidate in [
-        _repo_root / "motor_configuration.json",
-        _repo_root / "robot_configuration.json",
-        _repo_root / "configs" / "robot_configuration.json",
-        _src_dir / "control" / "robot_configuration.json",
-    ]:
-        if os.path.exists(str(_candidate)):
-            _config_file = str(_candidate)
-            break
+_config_path = get_config_path("motor_configuration.json")
+if not _config_path.exists():
+    _config_path = get_config_path("hardware/motor_configuration.json")
 
-if not os.path.exists(_config_file):
-    raise FileNotFoundError(f"No se encontró archivo de configuración de motores en {_repo_root}.")
+if not _config_path.exists():
+    raise FileNotFoundError(f"No se encontró archivo de configuración de motores en {REPO_ROOT}.")
 
-robot_configuration = json.load(open(_config_file))
+robot_configuration = json.load(open(_config_path))
 
 robot = Humanoid()
 
@@ -52,7 +47,8 @@ for entry in robot.joints:
     result = bus.ping(joint_id)
     print(f"success: {result}")
 
-    firmware_version = hex(bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION))
+    fw_val = bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION)
+    firmware_version = hex(fw_val) if fw_val is not None else "unknown"
     print(f"  firmware version: {firmware_version}")
 
     time.sleep(0.1)

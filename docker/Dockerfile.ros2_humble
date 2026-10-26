@@ -1,0 +1,36 @@
+FROM osrf/ros:humble-desktop
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# 1. Instalar rosbridge_server, teleop y herramientas esenciales
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-rosbridge-server \
+    ros-humble-teleop-twist-keyboard \
+    python3-pip \
+    python3-colcon-common-extensions \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Instalar dependencias de Python para la política de control
+# Instalamos PyTorch CPU para mantener la imagen ligera en entornos sin GPU
+RUN pip3 install --no-cache-dir \
+    numpy \
+    torch \
+    onnxruntime \
+    omegaconf \
+    pyyaml
+
+# 3. Directorio de trabajo con el repositorio montado
+WORKDIR /workspace/ITESO-Humanoid
+
+# 4. Asegurar que ROS 2 y el workspace estén en el PATH del entorno
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
+    echo "export PYTHONPATH=/workspace/ITESO-Humanoid/src:\$PYTHONPATH" >> /root/.bashrc
+
+# Exponer el puerto WebSocket estándar de rosbridge
+EXPOSE 9090
+
+# Por defecto: Iniciar rosbridge WebSocket Server en el puerto 9090
+CMD ["bash", "-c", "source /opt/ros/humble/setup.bash && export PYTHONPATH=/workspace/ITESO-Humanoid/src:$PYTHONPATH && ros2 launch rosbridge_server rosbridge_websocket_launch.xml"]

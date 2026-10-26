@@ -1,8 +1,15 @@
 import argparse
+from pathlib import Path
+from iteh.common.paths import URDF_DIR, MJCF_DIR, REPO_ROOT
 
 
-def postprocess_urdf(name):
-    urdf_path = f"data/urdf/{name}.urdf"
+def postprocess_urdf(name: str):
+    urdf_path = URDF_DIR / f"{name}.urdf"
+    if not urdf_path.exists():
+        candidate = REPO_ROOT / f"data/urdf/{name}.urdf"
+        if candidate.exists():
+            urdf_path = candidate
+
     with open(urdf_path, "r") as f:
         content = f.read()
 
@@ -11,12 +18,17 @@ def postprocess_urdf(name):
 
     with open(urdf_path, "w") as f:
         f.write(content)
-    
-    print("Postprocessing URDF complete")
+
+    print(f"Postprocessing URDF complete: {urdf_path}")
 
 
-def postprocess_mjcf(name):
-    mjcf_path = f"data/mjcf/{name}.xml"
+def postprocess_mjcf(name: str):
+    mjcf_path = MJCF_DIR / f"{name}.xml"
+    if not mjcf_path.exists():
+        candidate = REPO_ROOT / f"data/mjcf/{name}.xml"
+        if candidate.exists():
+            mjcf_path = candidate
+
     with open(mjcf_path, "r") as f:
         content = f.read()
 

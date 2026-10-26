@@ -1,14 +1,28 @@
 # Copyright (c) 2025, -T.K.-.
+import enum
 import math
 import struct
 import time
+from typing import Union
 
 try:
-    from . import can
-except ImportError:
-    import src.iteh.control.can.can as can
+    import can
+    import can.interface
+    import can.exceptions
+    _CAN_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    _CAN_AVAILABLE = False
+    class _CanExceptionsStub:
+        CanOperationError = type("CanOperationError", (Exception,), {})
+    class _CanInterfaceStub:
+        Bus = type("Bus", (), {})
+    class _CanStub:
+        exceptions = _CanExceptionsStub
+        interface = _CanInterfaceStub
+        Message = type("Message", (), {})
+    can = _CanStub()  # type: ignore
 
-class Function:
+class Function(int, enum.Enum):
     NMT                             = 0b0000
     SYNC_EMCY                       = 0b0001
     TIME                            = 0b0010
@@ -25,7 +39,7 @@ class Function:
     FLASH                           = 0b1101
     HEARTBEAT                       = 0b1110
 
-class Mode:
+class Mode(int, enum.Enum):
     # These are three safe modes
     DISABLED                        = 0x00
     IDLE                            = 0x01
@@ -44,7 +58,7 @@ class Mode:
     # This is a special mode for debugging
     DEBUG                           = 0x80
 
-class ErrorCode:
+class ErrorCode(int, enum.Enum):
     NO_ERROR                        = 0b0000000000000000
     GENERAL                         = 0b0000000000000001
     ESTOP                           = 0b0000000000000010
@@ -60,7 +74,7 @@ class ErrorCode:
     I2C_FAULT                       = 0b0000100000000000
 
 # supported version: >= 1.1.1
-class Parameter:
+class Parameter(int, enum.Enum):
     DEVICE_ID                                       = 0x000
     FIRMWARE_VERSION                                = 0x004
     WATCHDOG_TIMEOUT                                = 0x008
@@ -193,13 +207,20 @@ class Bus:
         self.channel = channel
         self.bitrate = bitrate
 
+        if not _CAN_AVAILABLE:
+            raise ImportError(
+                "python-can no está disponible o instalado. "
+                "Para utilizar interfaces de hardware CAN (ej. en Linux), instala python-can."
+            )
+
         self.__bus = can.interface.Bus(interface="socketcan", channel=self.channel, bitrate=self.bitrate)
 
     def __del__(self):
         self.stop()
 
     def stop(self):
-        self.__bus.shutdown()
+        if hasattr(self, "_Bus__bus") and self.__bus is not None:
+            self.__bus.shutdown()
 
     """
     Receive data.
@@ -271,12 +292,12 @@ class Bus:
     def feed(self, device_id: int) -> None:
         self.transmit(CANFrame(device_id, Function.HEARTBEAT))
 
-    def set_mode(self, device_id: int, mode: Mode) -> None:
+    def set_mode(self, device_id: int, mode: Union[Mode, int]) -> None:
         self.transmit(CANFrame(
             device_id,
             Function.NMT,
             size=2,
-            data=struct.pack("<BB", mode, device_id)
+            data=struct.pack("<BB", int(mode), device_id)
         ))
 
     def load_settings_from_flash(self, device_id: int) -> None:

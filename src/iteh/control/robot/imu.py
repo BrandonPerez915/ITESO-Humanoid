@@ -234,7 +234,7 @@ class SerialImu:
 
         # print(type, data1, data2, data3, data4, sumcrc)
         if frame_type == FrameType.TIME:
-            _, year, month, day, hour, minute, second, millisecond = struct.unpack("<BBBBhB", frame)
+            _, year, month, day, hour, minute, second, millisecond, _ = struct.unpack("<BBBBBBBHB", frame)
 
         elif frame_type == FrameType.ACCELERATION:
             self.acceleration[0] = data1 * 16.0 / 32768.0  # g

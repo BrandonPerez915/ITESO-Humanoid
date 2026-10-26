@@ -1,8 +1,6 @@
 """
 calibrate_joints.py
 
-Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
-
 Run this script after each power cycle to calibrate the encoder offset of each joint.
 """
 
@@ -10,21 +8,22 @@ import sys
 from pathlib import Path
 import time
 
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
+# Standardize path bootstrap
+_repo_root = Path(__file__).resolve()
+while _repo_root.parent != _repo_root:
+    if (_repo_root / "pyproject.toml").exists() or (_repo_root / "src" / "iteh").exists():
+        break
+    _repo_root = _repo_root.parent
+
+for _path in [str(_repo_root), str(_repo_root / "src")]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
+from iteh.common.paths import REPO_ROOT, SRC_DIR, get_config_path
+from iteh.control.robot import Humanoid
+
 import numpy as np
 import yaml
-
-try:
-    from bhl.control.robot import Humanoid
-except ImportError:
-    from src.control.robot import Humanoid
-
 
 robot = Humanoid()
 
@@ -36,7 +35,6 @@ joint_axis_directions = np.array([
     +1,
     +1, +1
 ])
-
 
 ideal_values = np.array([
     np.deg2rad(-(10)),
@@ -54,29 +52,15 @@ ideal_values = np.array([
     np.deg2rad(+(15)),
 ])
 
-
 print("initial readings:")
 limit_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in robot.joints]) * joint_axis_directions
 print([f"{reading:.2f}" for reading in limit_readings])
 
+robot.enter_damping()
+
 try:
-    while robot.command_controller.commands.get("mode_switch") != 1:
-        joint_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in robot.joints]) * joint_axis_directions
-
-        limit_readings[0] = min(limit_readings[0], joint_readings[0])
-        limit_readings[1] = max(limit_readings[1], joint_readings[1])
-        limit_readings[2] = max(limit_readings[2], joint_readings[2])
-        limit_readings[3] = min(limit_readings[3], joint_readings[3])
-        limit_readings[4] = min(limit_readings[4], joint_readings[4])
-        limit_readings[5] = min(limit_readings[5], joint_readings[5])
-
-        limit_readings[6] = max(limit_readings[6], joint_readings[6])
-        limit_readings[7] = min(limit_readings[7], joint_readings[7])
-        limit_readings[8] = max(limit_readings[8], joint_readings[8])
-        limit_readings[9] = min(limit_readings[9], joint_readings[9])
-        limit_readings[10] = min(limit_readings[10], joint_readings[10])
-        limit_readings[11] = max(limit_readings[11], joint_readings[11])
-
+    while True:
+        limit_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in robot.joints]) * joint_axis_directions
         print(time.time(), [f"{reading:.2f}" for reading in limit_readings])
 
         time.sleep(0.05)
@@ -91,7 +75,7 @@ try:
         "position_offsets": [float(offset) for offset in (limit_readings - ideal_values)],
     }
 
-    cal_path = _repo_root / "calibration.yaml"
+    cal_path = REPO_ROOT / "calibration.yaml"
     with open(cal_path, "w") as f:
         yaml.dump(calibration_data, f)
     print(f"Calibración guardada en: {cal_path}")

@@ -2,22 +2,13 @@
 
 import time
 
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 import numpy as np
 
-try:
-    from iteh.control import recoil as can
-    from iteh.control.robot.imu import SerialImu, Baudrate
-    from iteh.control.policy.gamepad import Se2Gamepad
-except ImportError:
-    try:
-        from .. import recoil as can
-        from .imu import SerialImu, Baudrate
-        from ..policy.gamepad import Se2Gamepad
-    except ImportError:
-        import src.control.recoil as can
-        from src.control.robot.imu import SerialImu, Baudrate
-        from src.control.policy.gamepad import Se2Gamepad
+from iteh.control import recoil as can
+from iteh.control.robot.imu import SerialImu, Baudrate
+from iteh.control.policy.gamepad import Se2Gamepad
+from iteh.common.paths import get_config_path, REPO_ROOT
 
 
 class State:
@@ -121,12 +112,18 @@ class Humanoid:
         self.init_percentage = 0.0
         self.starting_positions = np.zeros_like(self.joint_position_target, dtype=np.float32)
 
-        config_path = "calibration.yaml"
-        with open(config_path, "r") as f:
-            config = OmegaConf.load(f)
-        position_offsets = np.array(config.get("position_offsets", None))
-        assert position_offsets.shape[0] == len(self.joints)
-        self.position_offsets[:] = position_offsets
+        config_file = get_config_path("calibration.yaml")
+        if not config_file.exists():
+            config_file = REPO_ROOT / "calibration.yaml"
+        if config_file.exists():
+            with open(config_file, "r") as f:
+                config = OmegaConf.load(f)
+            if isinstance(config, DictConfig) and "position_offsets" in config:
+                raw_offsets = config["position_offsets"]
+                if raw_offsets is not None:
+                    position_offsets = np.array(raw_offsets, dtype=np.float32)
+                    if position_offsets.shape[0] == len(self.joints):
+                        self.position_offsets[:] = position_offsets
 
     def enter_damping(self):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)

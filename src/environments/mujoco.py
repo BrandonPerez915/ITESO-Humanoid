@@ -1,6 +1,6 @@
 """
 Backwards-compatibility shim for environments.mujoco.
-The canonical location is now `bhl.envs.mujoco`.
+The canonical location is now `iteh.envs.mujoco`.
 """
 
 from iteh.envs.mujoco import (

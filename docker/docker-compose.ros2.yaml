@@ -1,0 +1,20 @@
+services:
+  ros2_humble:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ros2_humble
+    image: iteso-humanoid-ros2:humble
+    container_name: iteso_ros2_humble
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../:/workspace/ITESO-Humanoid
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "source /opt/ros/humble/setup.bash &&
+               export PYTHONPATH=/workspace/ITESO-Humanoid/src:$$PYTHONPATH &&
+               ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
+    stdin_open: true
+    tty: true

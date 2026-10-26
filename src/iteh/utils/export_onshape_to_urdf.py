@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 
 
+from iteh.common.paths import URDF_DIR, SCAD_DIR, ASSETS_DIR, REPO_ROOT
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Script to generate URDF file from onshape CAD project.",
@@ -15,14 +17,14 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the config file.",
-        default="src/assets/urdf/config.json",
+        default=str(URDF_DIR / "config.json"),
     )
     args = parser.parse_args()
 
     # check if the config file exists
     config_file_path = Path(args.config)
     if not config_file_path.exists():
-        fallback_path = Path(__file__).resolve().parents[1] / "assets" / "urdf" / "config.json"
+        fallback_path = URDF_DIR / "config.json"
         if fallback_path.exists():
             config_file_path = fallback_path
         else:
@@ -31,7 +33,7 @@ if __name__ == "__main__":
     robot_name = json.load(open(config_file_path))["output_filename"]
     urdf_dir = config_file_path.parent
     robot_dir = urdf_dir.parent
-    scad_dir = robot_dir / "scad"
+    scad_dir = SCAD_DIR if SCAD_DIR.exists() else robot_dir / "scad"
 
     # copy all the predefined scad files to the urdf assets directory
     # for onshape-to-robot to generate custom colliders

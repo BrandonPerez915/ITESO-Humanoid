@@ -8,7 +8,7 @@ for controlling the Berkeley Humanoid Lite robot. It handles UDP communication f
 receiving observations and sending actions to the robot.
 """
 
-from typing import Union
+from typing import Union, Optional, Any
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -92,14 +92,15 @@ class RlController:
         c = q_vec * (np.dot(q_vec, v)) * 2.0
         return a - b + c
 
-    def __init__(self, cfg: Union[DictConfig, ListConfig]):
+    def __init__(self, cfg: Union[DictConfig, ListConfig, Any]):
         """
         Initialize the PolicyRunner.
 
         Args:
-            cfg (Union[DictConfig, ListConfig]): Configuration object containing policy parameters
+            cfg (Union[DictConfig, ListConfig, Any]): Configuration object containing policy parameters
         """
         self.cfg = cfg
+        self.policy: Optional[Policy] = None
 
         # for data logging
         self.data_log = []
@@ -122,6 +123,12 @@ class RlController:
         self.policy_observations = np.zeros((1, self.cfg.num_observations * (self.cfg.history_length + 1)), dtype=np.float32)
         self.policy_actions = np.zeros((1, self.cfg.num_actions), dtype=np.float32)
         self.prev_actions = np.zeros((self.cfg.num_actions,), dtype=np.float32)
+
+    def reset(self) -> None:
+        """Reset the observation buffer and previous actions."""
+        self.policy_observations.fill(0.0)
+        self.policy_actions.fill(0.0)
+        self.prev_actions.fill(0.0)
 
     def load_policy(self) -> None:
         """
@@ -186,7 +193,10 @@ class RlController:
         ], axis=0)
 
         # Execute policy
-        self.policy_actions[:] = self.policy.forward(self.policy_observations)
+        if self.policy is not None:
+            self.policy_actions[:] = self.policy.forward(self.policy_observations)
+        else:
+            self.policy_actions.fill(0.0)
 
         # Process and scale actions
         policy_actions_clipped = np.clip(self.policy_actions[0],

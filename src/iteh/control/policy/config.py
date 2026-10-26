@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import argparse
 import os
+from typing import cast, Union
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
@@ -46,18 +49,46 @@ class Cfg(DictConfig):
     action_limit_upper: float
 
     @staticmethod
-    def from_arguments() -> DictConfig | ListConfig:
+    def load(config_name_or_path: str = "biped_25hz.yaml", control_mode: str = "ros2") -> Cfg:
+        """
+        Load configuration directly by name or path.
+
+        Args:
+            config_name_or_path (str): File name (in configs/policies or configs/) or absolute path.
+            control_mode (str): Control input mode ('ros2', 'gamepad', 'keyboard').
+
+        Returns:
+            Cfg: Loaded configuration object
+        """
+        from iteh.common.paths import get_config_path, CONFIGS_DIR
+        config_path = str(get_config_path(config_name_or_path))
+
+        if not os.path.exists(config_path):
+            available = [p.name for p in sorted(CONFIGS_DIR.glob("**/*.yaml"))]
+            raise FileNotFoundError(
+                f"Archivo de configuración '{config_name_or_path}' no encontrado en '{config_path}'.\n"
+                f"Archivos disponibles en configs/: {', '.join(available)}"
+            )
+
+        with open(config_path, "r") as f:
+            cfg = OmegaConf.load(f)
+
+        cfg.control_mode = control_mode
+        return cast(Cfg, cfg)
+
+    @staticmethod
+    def from_arguments() -> Cfg:
         """
         Parse command line arguments and load configuration file.
 
         Returns:
-            DictConfig | ListConfig: Loaded configuration object
+            Cfg: Loaded configuration object
         """
-        parser = argparse.ArgumentParser(description="Policy Runner for Berkeley Humanoid Lite")
+        parser = argparse.ArgumentParser(description="Policy Runner for ITESO Humanoid / Berkeley Humanoid Lite")
         parser.add_argument(
             "--config",
             type=str,
-            default="policy_biped_25hz_a.yaml",
+            default="biped_25hz.yaml",
             help="Path to the configuration file",
         )
         parser.add_argument(
@@ -73,7 +104,7 @@ class Cfg(DictConfig):
         config_path = str(get_config_path(args.config))
 
         if not os.path.exists(config_path):
-            available = [p.name for p in sorted(CONFIGS_DIR.glob("*.yaml"))]
+            available = [p.name for p in sorted(CONFIGS_DIR.glob("**/*.yaml"))]
             raise FileNotFoundError(
                 f"Archivo de configuración '{args.config}' no encontrado en '{config_path}'.\n"
                 f"Archivos disponibles en configs/: {', '.join(available)}"
@@ -86,4 +117,4 @@ class Cfg(DictConfig):
             cfg = OmegaConf.load(f)
 
         cfg.control_mode = args.control
-        return cfg
+        return cast(Cfg, cfg)

@@ -4,13 +4,7 @@ import time
 import serial
 import numpy as np
 
-try:
-    from iteh.control import recoil
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-    except ImportError:
-        from .. import recoil
+from iteh.control import recoil
 
 
 class Bimanual:
@@ -52,7 +46,7 @@ class Bimanual:
         self.gripper_left_target = 0.5
         self.gripper_right_target = 0.5
 
-    def start(self, kp=20, kd=2, torque_limit=1):
+    def start(self, kp: float = 20.0, kd: float = 2.0, torque_limit: float = 1.0):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
         self.joint_kd = np.zeros((len(self.joints),), dtype=np.float32)
         self.torque_limit = np.zeros((len(self.joints),), dtype=np.float32)
@@ -83,6 +77,8 @@ class Bimanual:
 
         print("Motors enabled")
         print(self.position_offsets)
+
+    run = start
 
     def stop(self):
         for entry in self.joints:

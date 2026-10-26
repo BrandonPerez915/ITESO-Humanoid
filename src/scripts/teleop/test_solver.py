@@ -2,10 +2,14 @@ import os
 import sys
 from pathlib import Path
 import time
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
+# Standardize path bootstrap
+_repo_root = Path(__file__).resolve()
+while _repo_root.parent != _repo_root:
+    if (_repo_root / "pyproject.toml").exists() or (_repo_root / "src" / "iteh").exists():
+        break
+    _repo_root = _repo_root.parent
+
+for _path in [str(_repo_root), str(_repo_root / "src")]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
@@ -20,7 +24,7 @@ from pink.utils import custom_configuration_vector
 from pink.visualization import start_meshcat_visualizer
 import pinocchio as pin
 
-from bhl.common.paths import get_urdf_path
+from iteh.common.paths import REPO_ROOT, SRC_DIR, get_urdf_path
 DEFAULT_URDF_PATH = str(get_urdf_path(biped=False))
 
 

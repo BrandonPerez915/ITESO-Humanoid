@@ -3,20 +3,23 @@ import sys
 from pathlib import Path
 import threading
 
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
+# Standardize path bootstrap
+_repo_root = Path(__file__).resolve()
+while _repo_root.parent != _repo_root:
+    if (_repo_root / "pyproject.toml").exists() or (_repo_root / "src" / "iteh").exists():
+        break
+    _repo_root = _repo_root.parent
+
+for _path in [str(_repo_root), str(_repo_root / "src")]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
 import numpy as np
 from cc.udp import UDP
 
-try:
-    from bhl.envs.mujoco import MujocoVisualizer, Cfg
-except ImportError:
-    from src.environments.mujoco import MujocoVisualizer, Cfg
+from iteh.common.paths import REPO_ROOT, SRC_DIR
+from iteh.envs.mujoco import MujocoVisualizer
+from iteh.control.policy import Cfg
 
 
 if __name__ == "__main__":
