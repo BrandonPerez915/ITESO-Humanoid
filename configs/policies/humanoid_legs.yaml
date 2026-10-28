@@ -1,12 +1,19 @@
-policy_checkpoint_path: "models/policy_humanoid_legs.onnx"
+# - Policy path
+policy_checkpoint_path: "models/humanoid_legs.onnx"
+
+# - Networking configurations
 ip_robot_addr: 127.0.0.1
 ip_policy_obs_port: 10000
 ip_host_addr: 127.0.0.1
 ip_policy_acs_port: 10001
+
+# - Physics configurations
 control_dt: 0.004
 policy_dt: 0.04
 physics_dt: 0.0005
 cutoff_freq: 1000
+
+# - Articulation configurations
 num_joints: 22
 joints:
 - arm_left_shoulder_pitch_joint
@@ -127,12 +134,18 @@ default_joint_positions:
 - 0.4
 - -0.3
 - 0.0
+
+# - Observation configurations
 num_observations: 45
 history_length: 0
+
+# - Command configurations
 command_velocity:
 - -0.06104689836502075
 - -0.4463099241256714
 - 1.1110564470291138
+
+# - Action configurations
 num_actions: 12
 action_scale: 0.25
 action_indices:

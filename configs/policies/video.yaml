@@ -1,7 +1,7 @@
 # The policy used in the supplementary video
 
 # === Policy configurations ===
-policy_checkpoint_path: "models/policy_video.onnx"
+policy_checkpoint_path: "models/video.onnx"
 
 # === Networking configurations ===
 ip_robot_addr: "127.0.0.1"
