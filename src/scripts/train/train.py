@@ -2,16 +2,25 @@
 
 """Launch Isaac Sim Simulator first."""
 
+from __future__ import annotations
+
 import argparse
 import sys
+from pathlib import Path
+
+# Ensure project root and src/ are in sys.path
+_repo_root = Path(__file__).resolve().parents[3]
+_src_dir = _repo_root / "src"
+for _path in [str(_repo_root), str(_src_dir)]:
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 from isaaclab.app import AppLauncher
 
 # local imports
-import src.scripts.train.cli_args as cli_args  # isort: skip
+import scripts.train.cli_args as cli_args  # isort: skip
 
-
-# add argparse arguments
+# Add CLI tool arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
@@ -26,7 +35,7 @@ cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
-# always enable cameras to record video
+# Enable cameras if video arg is set to true, this is required for video recording
 if args_cli.video:
     args_cli.enable_cameras = True
 
@@ -39,11 +48,12 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
+from datetime import datetime
 import os
 import pickle
+
+import gymnasium as gym
 import torch
-from datetime import datetime
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -60,24 +70,8 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-import sys
-from pathlib import Path
-
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 # Import extensions to set up environment tasks
-try:
-    import bhl.tasks  # noqa: F401
-except ImportError:
-    try:
-        import src.iteh.tasks  # noqa: F401
-    except ImportError:
-        import tasks  # noqa: F401
+import train  # noqa: F401
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -90,13 +84,9 @@ def dump_pickle(filename: str, data: object):
 
     The function creates any missing directory along the file's path.
     """
-    # check ending
     if not filename.endswith("pkl"):
         filename += ".pkl"
-    # create directory
-    if not os.path.exists(os.path.dirname(filename)):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-    # save data
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "wb") as f:
         pickle.dump(data, f)
 
@@ -123,6 +113,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # Write Isaac Lab internal logs to the project folder to avoid /tmp permission issues.
     isaaclab_log_dir = os.path.join(log_root_path, "isaaclab")
     os.makedirs(isaaclab_log_dir, exist_ok=True)
+    if hasattr(env_cfg, "log_dir"):
+        env_cfg.log_dir = isaaclab_log_dir
     if hasattr(env_cfg.sim, "log_dir"):
         env_cfg.sim.log_dir = isaaclab_log_dir
     # specify directory for logging runs: {time-stamp}_{run_name}
@@ -131,8 +123,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         log_dir += f"_{agent_cfg.run_name}"
     log_dir = os.path.join(log_root_path, log_dir)
 
+    # save resume path before creating a new log_dir
+    if agent_cfg.resume:
+        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
+    # convert to single-agent instance if required by the RL algorithm
+    if isinstance(env.unwrapped, DirectMARLEnv):
+        env = multi_agent_to_single_agent(env)
+
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -145,23 +146,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
-
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)
+    try:
+        env = RslRlVecEnvWrapper(env, clip_actions=getattr(agent_cfg, "clip_actions", None))
+    except TypeError:
+        env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
-    # save resume path before creating a new log_dir
+    # load checkpoint if resuming
     if agent_cfg.resume:
-        # get path to previous checkpoint
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        # load previously trained model
         runner.load(resume_path)
 
     # dump the configuration into log-directory
@@ -179,6 +176,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
 if __name__ == "__main__":
     # run the main function
-    main()
+    main()  # type: ignore[call-arg]
     # close sim app
     simulation_app.close()

@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
+_repo_root = Path(__file__).resolve().parents[3]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -28,20 +28,14 @@ import gymnasium as gym
 from prettytable import PrettyTable
 
 # Import extensions to set up environment tasks
-try:
-    import bhl.tasks  # noqa: F401
-except ImportError:
-    try:
-        import src.iteh.tasks  # noqa: F401
-    except ImportError:
-        import tasks  # noqa: F401
+import train  # noqa: F401
 
 
 def main():
-    """Print all environments registered in `isaac.lab_demo` extension."""
+    """Print all environments registered in `train` extension."""
     # print all the available environments
     table = PrettyTable(["S. No.", "Task Name", "Entry Point", "Config"])
-    table.title = "Available Environments in Isaac Lab Template Extension"
+    table.title = "Available Environments in ITESO Humanoid"
     # set alignment of table columns
     table.align["Task Name"] = "l"
     table.align["Entry Point"] = "l"
@@ -51,7 +45,7 @@ def main():
     index = 0
     # acquire all Isaac environments names
     for task_spec in gym.registry.values():
-        if "Template-" in task_spec.id:
+        if "Berkeley-Humanoid-Lite" in task_spec.id:
             # add details to table
             table.add_row([index + 1, task_spec.id, task_spec.entry_point, task_spec.kwargs["env_cfg_entry_point"]])
             # increment count

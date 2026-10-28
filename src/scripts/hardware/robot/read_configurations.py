@@ -4,22 +4,14 @@ import json
 import time
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
+_repo_root = Path(__file__).resolve().parents[4]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-try:
-    from bhl.control import recoil
-    from bhl.control.robot import Humanoid
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-        from src.control.robot import Humanoid
-    except ImportError:
-        from control import recoil
-        from control.robot import Humanoid
+from iteh.control import recoil
+from src.iteh.robot.humanoid import Humanoid
 
 
 robot_configuration = {}
@@ -41,10 +33,10 @@ for entry in robot.joints:
         "encoder": {},
     }
 
-    config["device_id"] = bus._read_parameter_u32(joint_id, recoil.Parameter.DEVICE_ID)
-    config["firmware_version"] = hex(bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION))
-    config["watchdog_timeout"] = bus._read_parameter_u32(joint_id, recoil.Parameter.WATCHDOG_TIMEOUT)
-    config["fast_frame_frequency"] = bus.read_fast_frame_frequency(joint_id)
+    config["device_id"] = bus._read_parameter_u32(joint_id, recoil.Parameter.DEVICE_ID) # type: ignore
+    config["firmware_version"] = hex(bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION)) # type: ignore
+    config["watchdog_timeout"] = bus._read_parameter_u32(joint_id, recoil.Parameter.WATCHDOG_TIMEOUT) # type: ignore
+    config["fast_frame_frequency"] = bus.read_fast_frame_frequency(joint_id) # type: ignore
 
     config["position_controller"]["gear_ratio"] = bus._read_parameter_f32(joint_id, recoil.Parameter.POSITION_CONTROLLER_GEAR_RATIO)
     config["position_controller"]["position_kp"] = bus.read_position_kp(joint_id)
@@ -80,11 +72,12 @@ for entry in robot.joints:
     time.sleep(0.1)
 
 
-out_path = _repo_root / "motor_configuration.json"
+out_path = _repo_root / "configs" / "hardware" / "motor.json"
+out_path.parent.mkdir(parents=True, exist_ok=True)
 with open(out_path, "w") as f:
     json.dump(robot_configuration, f, indent=4)
 print(f"Configuración guardada en: {out_path}")
 
-robot.stop(joint_id)
+robot.stop()
 
 print("Done")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict
 import os
 import sys
@@ -6,7 +8,7 @@ import time
 import threading
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
+_repo_root = Path(__file__).resolve().parents[3]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -23,12 +25,8 @@ import meshcat_shapes
 from cc.udp import UDP
 from loop_rate_limiters import RateLimiter
 
-try:
-    from bhl.control.robot.bimanual import Bimanual
-    from bhl.common.paths import get_urdf_path
-except ImportError:
-    from src.control.robot.bimanual import Bimanual
-    from src.iteh.common.paths import get_urdf_path
+from iteh.robot.bimanual import Bimanual
+from common.paths import get_urdf_path
 
 
 np.set_printoptions(precision=2)

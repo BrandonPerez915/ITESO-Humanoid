@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
+_repo_root = Path(__file__).resolve().parents[3]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -16,12 +16,8 @@ from typing import Union
 import numpy as np
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-try:
-    from bhl.control.policy import RlController
-    from bhl.common.paths import get_config_path
-except ImportError:
-    from src.control.policy.rl_controller import RlController
-    from src.iteh.common.paths import get_config_path
+from iteh.policy.runner import RlController
+from common.paths import get_config_path
 
 
 def parse_arguments() -> Union[DictConfig, ListConfig]:
@@ -32,7 +28,7 @@ def parse_arguments() -> Union[DictConfig, ListConfig]:
         Union[DictConfig, ListConfig]: Loaded configuration object
     """
     parser = argparse.ArgumentParser(description="Policy Runner for Berkeley Humanoid Lite")
-    parser.add_argument("--config", type=str, default="policy_humanoid.yaml",
+    parser.add_argument("--config", type=str, default="humanoid.yaml",
                        help="Path to the configuration file")
     args = parser.parse_args()
 
@@ -53,6 +49,6 @@ cfg = parse_arguments()
 controller = RlController(cfg)
 controller.load_policy()
 
-obs = np.zeros((63,), dtype=np.float32)  # Example observation, adjust as needed
+obs = np.zeros((7 + cfg.num_actions * 2 + 4,), dtype=np.float32)  # Example observation, adjust as needed
 
 actions = controller.update(obs)

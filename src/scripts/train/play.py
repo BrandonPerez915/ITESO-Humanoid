@@ -1,17 +1,21 @@
-"""Script to play a checkpoint if an RL agent from RSL-RL."""
+"""Script to play a checkpoint of an RL agent from RSL-RL."""
 
 """Launch Isaac Sim Simulator first."""
 
+from __future__ import annotations
+
 import argparse
+import sys
+from pathlib import Path
 
 from isaaclab.app import AppLauncher
 
 # local imports
-import src.scripts.train.cli_args as cli_args  # isort: skip
+import scripts.train.cli_args as cli_args  # isort: skip
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
+parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL.")
+parser.add_argument("--video", action="store_true", default=False, help="Record videos during play.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
@@ -33,38 +37,22 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
+
+import gymnasium as gym
+from omegaconf import OmegaConf
 import torch
 
 from rsl_rl.runners import OnPolicyRunner
-from omegaconf import OmegaConf
 
-import isaaclab.utils.string as string_utils
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
+import isaaclab.utils.string as string_utils
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
-import sys
-from pathlib import Path
-
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 # Import extensions to set up environment tasks
-try:
-    import bhl.tasks  # noqa: F401
-except ImportError:
-    try:
-        import src.iteh.tasks  # noqa: F401
-    except ImportError:
-        import tasks  # noqa: F401
-
+import train  # noqa: F401
 
 def main():
     """Play with RSL-RL agent."""
@@ -83,6 +71,11 @@ def main():
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
+    # convert to single-agent instance if required by the RL algorithm
+    if isinstance(env.unwrapped, DirectMARLEnv):
+        env = multi_agent_to_single_agent(env)
+
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -95,12 +88,11 @@ def main():
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
-
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)
+    try:
+        env = RslRlVecEnvWrapper(env, clip_actions=getattr(agent_cfg, "clip_actions", None))
+    except TypeError:
+        env = RslRlVecEnvWrapper(env)
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
@@ -110,14 +102,23 @@ def main():
     # obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
+    # extract policy neural network and normalizer (compatible across rsl_rl versions)
+    try:
+        policy_nn = ppo_runner.alg.policy
+    except AttributeError:
+        policy_nn = ppo_runner.alg.actor_critic
+
+    if hasattr(policy_nn, "actor_obs_normalizer"):
+        obs_normalizer = policy_nn.actor_obs_normalizer
+    elif hasattr(ppo_runner, "obs_normalizer"):
+        obs_normalizer = ppo_runner.obs_normalizer
+    else:
+        obs_normalizer = None
+
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(
-        ppo_runner.alg.policy, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
-    )
-    export_policy_as_onnx(
-        ppo_runner.alg.policy, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    )
+    export_policy_as_jit(policy_nn, obs_normalizer, path=export_model_dir, filename="policy.pt")
+    export_policy_as_onnx(policy_nn, normalizer=obs_normalizer, path=export_model_dir, filename="policy.onnx")
 
     # === export the yaml config for deployment ===
     num_joints = len(env_cfg.scene.robot.init_state.joint_pos)
@@ -132,7 +133,6 @@ def main():
 
     # extract the configurations from the actuator groups
     for group in env_cfg.scene.robot.actuators.values():
-        # string util method expects a dict
         match_expr_list = [expr for expr in group.joint_names_expr]
         match_expr_dict = {expr: None for expr in match_expr_list}
 
@@ -144,6 +144,12 @@ def main():
     # extract the indices of the actuated joints
     match_expr_list = {expr: None for expr in env_cfg.actions.joint_pos.joint_names}
     action_indices, _, _ = string_utils.resolve_matching_names_values(match_expr_list, joint_names, preserve_order=True)
+
+    isaac_history_len = env_cfg.observations.policy.actions.history_length or 0
+    num_history_frames = max(isaac_history_len, 1)
+    total_policy_obs = int(env.observation_space["policy"].shape[-1])
+    single_step_obs = total_policy_obs // num_history_frames
+    deploy_history_len = max(isaac_history_len - 1, 0)
 
     deploy_config = {
         # === Policy configurations ===
@@ -167,18 +173,18 @@ def main():
         "joint_kp": joint_kp.tolist(),
         "joint_kd": joint_kd.tolist(),
         "effort_limits": effort_limits.tolist(),
-        "default_base_position": env_cfg.scene.robot.init_state.pos,
+        "default_base_position": list(env_cfg.scene.robot.init_state.pos),
         "default_joint_positions": init_joint_pos,
 
         # === Observation configurations ===
-        "num_observations": env.observation_space["policy"].shape[-1],
-        "history_length": env_cfg.observations.policy.actions.history_length,
+        "num_observations": single_step_obs,
+        "history_length": deploy_history_len,
 
         # === Command configurations ===
         # sample a command
         "command_velocity": env_cfg.observations.policy.velocity_commands.func(
             env.unwrapped, env_cfg.observations.policy.velocity_commands.params["command_name"]
-            )[0].tolist(),
+        )[0].tolist(),
 
         # === Action configurations ===
         "num_actions": env.action_space.shape[-1],
@@ -187,12 +193,13 @@ def main():
         "action_limit_lower": -10000,
         "action_limit_upper": 10000,
     }
-    if not os.path.exists("configs"):
-        os.makedirs("configs")
+    os.makedirs("configs/policies", exist_ok=True)
     OmegaConf.save(deploy_config, "configs/policy_latest.yaml")
+    OmegaConf.save(deploy_config, "configs/policies/policy_latest.yaml")
 
     # reset environment
-    obs, _ = env.get_observations()
+    obs_ret = env.get_observations()
+    obs = obs_ret[0] if isinstance(obs_ret, tuple) else obs_ret
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
@@ -201,7 +208,8 @@ def main():
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            step_ret = env.step(actions)
+            obs = step_ret[0]
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

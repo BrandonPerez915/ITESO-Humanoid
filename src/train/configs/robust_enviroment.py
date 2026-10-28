@@ -26,10 +26,14 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-import isaaclab.envs.mdp as mdp
-
-from src.train.configs.robot import ARM_JOINTS, HUMANOID_JOINTS, LEG_JOINTS
-from src.train.configs.enviroment import BerkeleyHumanoidLiteEnvCfg, EventsCfg, RewardsCfg
+try:
+    from .. import mdp
+    from .robot import ARM_JOINTS, HUMANOID_JOINTS, LEG_JOINTS
+    from .enviroment import BerkeleyHumanoidLiteEnvCfg, EventsCfg, RewardsCfg
+except (ImportError, ValueError):
+    from train import mdp
+    from train.configs.robot import ARM_JOINTS, HUMANOID_JOINTS, LEG_JOINTS
+    from train.configs.enviroment import BerkeleyHumanoidLiteEnvCfg, EventsCfg, RewardsCfg
 
 # Total number of frames buffered per observation (4 past + 1 current = 0.2 s at 25 Hz).
 ACTOR_HISTORY_LENGTH = 5

@@ -4,19 +4,13 @@ import json
 import time
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
+_repo_root = Path(__file__).resolve().parents[4]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-try:
-    from bhl.control import recoil
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-    except ImportError:
-        from control import recoil
+from iteh.control import recoil
 
 
 args = recoil.util.get_args()
@@ -35,7 +29,7 @@ config = {
 }
 
 config["device_id"] = bus._read_parameter_u32(device_id, recoil.Parameter.DEVICE_ID)
-config["firmware_version"] = hex(bus._read_parameter_u32(device_id, recoil.Parameter.FIRMWARE_VERSION))
+config["firmware_version"] = hex(bus._read_parameter_u32(device_id, recoil.Parameter.FIRMWARE_VERSION)) # type: ignore
 config["watchdog_timeout"] = bus._read_parameter_u32(device_id, recoil.Parameter.WATCHDOG_TIMEOUT)
 config["fast_frame_frequency"] = bus.read_fast_frame_frequency(device_id)
 

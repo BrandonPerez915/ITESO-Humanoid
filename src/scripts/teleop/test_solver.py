@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import time
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
+_repo_root = Path(__file__).resolve().parents[3]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -20,7 +20,7 @@ from pink.utils import custom_configuration_vector
 from pink.visualization import start_meshcat_visualizer
 import pinocchio as pin
 
-from bhl.common.paths import get_urdf_path
+from common.paths import get_urdf_path
 DEFAULT_URDF_PATH = str(get_urdf_path(biped=False))
 
 

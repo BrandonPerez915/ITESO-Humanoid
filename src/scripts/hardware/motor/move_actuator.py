@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
+_repo_root = Path(__file__).resolve().parents[4]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -12,13 +12,7 @@ for _path in [str(_repo_root), str(_src_dir)]:
 
 from loop_rate_limiters import RateLimiter
 
-try:
-    from bhl.control import recoil
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-    except ImportError:
-        from control import recoil
+from iteh.control import recoil
 
 
 args = recoil.util.get_args()
