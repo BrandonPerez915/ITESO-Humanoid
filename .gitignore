@@ -131,5 +131,6 @@ _build
 **/urdf/assets/
 
 # Project assets (e.g. CAD exports, textures) and other large files (does not ignore tracked src/assets)
-assets/*
+assets/
 models/*
+.git/

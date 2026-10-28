@@ -1,19 +1,19 @@
-# === Policy configurations ===
-policy_checkpoint_path: "models/policy_biped_25hz_a.onnx"
+# - Policy path
+policy_checkpoint_path: "models/biped_25hz.onnx"
 
-# === Networking configurations ===
+# - Networking configurations
 ip_robot_addr: 127.0.0.1
 ip_policy_obs_port: 10000
 ip_host_addr: 127.0.0.1
 ip_policy_acs_port: 10001
 
-# === Physics configurations ===
+# - Physics configurations
 control_dt: 0.004
 policy_dt: 0.04
 physics_dt: 0.0005
 cutoff_freq: 1000
 
-# === Articulation configurations ===
+# - Articulation configurations
 num_joints: 12
 joints:
 - leg_left_hip_roll_joint
@@ -85,14 +85,14 @@ default_joint_positions:
 - -0.3
 - 0.0
 
-# === Observation configurations ===
+# - Observation configurations
 num_observations: 45
 history_length: 0
 
-# === Command configurations ===
+# - Command configurations
 command_velocity: [0.0, 0.0, 0.0]
 
-# === Action configurations ===
+# - Action configurations
 num_actions: 12
 action_scale: 0.25
 action_indices:

@@ -1,5 +1,5 @@
 # === Policy configurations ===
-policy_checkpoint_path: "models/policy_humanoid.onnx"
+policy_checkpoint_path: "models/humanoid.onnx"
 
 # === Networking configurations ===
 ip_robot_addr: 127.0.0.1
