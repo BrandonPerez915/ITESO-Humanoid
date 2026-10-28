@@ -11,7 +11,7 @@ from pathlib import Path
 import time
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
+_repo_root = Path(__file__).resolve().parents[3]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
@@ -21,9 +21,9 @@ import numpy as np
 import yaml
 
 try:
-    from bhl.control.robot import Humanoid
+    from iteh.robot.humanoid import Humanoid
 except ImportError:
-    from src.control.robot import Humanoid
+    from src.iteh.robot.humanoid import Humanoid
 
 
 robot = Humanoid()
@@ -91,7 +91,8 @@ try:
         "position_offsets": [float(offset) for offset in (limit_readings - ideal_values)],
     }
 
-    cal_path = _repo_root / "calibration.yaml"
+    cal_path = _repo_root / "configs" / "hardware" / "calibration.yaml"
+    cal_path.parent.mkdir(parents=True, exist_ok=True)
     with open(cal_path, "w") as f:
         yaml.dump(calibration_data, f)
     print(f"Calibración guardada en: {cal_path}")

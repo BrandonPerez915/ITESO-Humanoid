@@ -5,30 +5,23 @@ import time
 import os
 
 # Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
+_repo_root = Path(__file__).resolve().parents[4]
 _src_dir = _repo_root / "src"
 for _path in [str(_repo_root), str(_src_dir)]:
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-try:
-    from bhl.control import recoil
-    from bhl.control.robot import Humanoid
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-        from src.control.robot import Humanoid
-    except ImportError:
-        from control import recoil
-        from control.robot import Humanoid
+from common.paths import get_config_path
+from iteh.control import recoil
+from src.iteh.robot.humanoid import Humanoid
 
-_config_file = "motor_configuration.json"
+_config_file = str(get_config_path("motor.json"))
 if not os.path.exists(_config_file):
     for _candidate in [
+        _repo_root / "configs" / "hardware" / "motor.json",
         _repo_root / "motor_configuration.json",
         _repo_root / "robot_configuration.json",
         _repo_root / "configs" / "robot_configuration.json",
-        _src_dir / "control" / "robot_configuration.json",
     ]:
         if os.path.exists(str(_candidate)):
             _config_file = str(_candidate)
@@ -52,7 +45,7 @@ for entry in robot.joints:
     result = bus.ping(joint_id)
     print(f"success: {result}")
 
-    firmware_version = hex(bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION))
+    firmware_version = hex(bus._read_parameter_u32(joint_id, recoil.Parameter.FIRMWARE_VERSION)) # type: ignore
     print(f"  firmware version: {firmware_version}")
 
     time.sleep(0.1)

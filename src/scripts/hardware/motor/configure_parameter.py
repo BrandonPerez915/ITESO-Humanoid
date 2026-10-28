@@ -1,84 +1,68 @@
-import sys
-from pathlib import Path
-
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[3]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
-try:
-    from bhl.control import recoil
-except ImportError:
-    try:
-        import src.control.recoil as recoil
-    except ImportError:
-        from control import recoil
+from src.iteh.control import can
 
 
-args = recoil.util.get_args()
-bus = recoil.Bus(channel=args.channel, bitrate=1000000)
+args = can.util.get_args()
+bus = can.Bus(channel=args.channel, bitrate=1000000)
 
 device_id = args.id
 
 
-def configure_fast_frame_rate(bus: recoil.Bus, device_id: int, fast_frame_rate: int):
-    print("Rate (before):\t", bus._read_parameter_u32(device_id, recoil.Parameter.FAST_FRAME_FREQUENCY))
-    bus._write_parameter_u32(device_id, recoil.Parameter.FAST_FRAME_FREQUENCY, fast_frame_rate)
-    print("Rate (updated):\t", bus._read_parameter_u32(device_id, recoil.Parameter.FAST_FRAME_FREQUENCY))
+def configure_fast_frame_rate(bus: can.Bus, device_id: int, fast_frame_rate: int):
+    print("Rate (before):\t", bus._read_parameter_u32(device_id, can.Parameter.FAST_FRAME_FREQUENCY))
+    bus._write_parameter_u32(device_id, can.Parameter.FAST_FRAME_FREQUENCY, fast_frame_rate)
+    print("Rate (updated):\t", bus._read_parameter_u32(device_id, can.Parameter.FAST_FRAME_FREQUENCY))
 
 
-def configure_gear_ratio(bus: recoil.Bus, device_id: int, gear_ratio: float):
-    print("Gear Ratio (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_GEAR_RATIO))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_GEAR_RATIO, -gear_ratio)
-    print("Gear Ratio (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_GEAR_RATIO))
+def configure_gear_ratio(bus: can.Bus, device_id: int, gear_ratio: float):
+    print("Gear Ratio (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_GEAR_RATIO))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_GEAR_RATIO, -gear_ratio)
+    print("Gear Ratio (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_GEAR_RATIO))
 
 
-def configure_position_pd(bus: recoil.Bus, device_id: int, kp: float, kd: float):
-    print("Kp (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_KP))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_KP, kp)
-    print("Kp (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_KP))
+def configure_position_pd(bus: can.Bus, device_id: int, kp: float, kd: float):
+    print("Kp (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_KP))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_KP, kp)
+    print("Kp (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_KP))
 
-    print("Kd (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_VELOCITY_KP))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_VELOCITY_KP, kd)
-    print("Kd (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_VELOCITY_KP))
-
-
-def configure_torque_limit(bus: recoil.Bus, device_id: int, torque_limit: float):
-    print("Torque Limit (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT, torque_limit)
-    print("Torque Limit (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT))
+    print("Kd (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_VELOCITY_KP))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_VELOCITY_KP, kd)
+    print("Kd (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_VELOCITY_KP))
 
 
-def configure_phase_order(bus: recoil.Bus, device_id: int, phase_order: int):
-    print("Phase order (before):\t", bus._read_parameter_i32(device_id, recoil.Parameter.MOTOR_PHASE_ORDER))
-    bus._write_parameter_i32(device_id, recoil.Parameter.MOTOR_PHASE_ORDER, phase_order)
-    print("Phase order (updated):\t", bus._read_parameter_i32(device_id, recoil.Parameter.MOTOR_PHASE_ORDER))
+def configure_torque_limit(bus: can.Bus, device_id: int, torque_limit: float):
+    print("Torque Limit (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT, torque_limit)
+    print("Torque Limit (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_TORQUE_LIMIT))
 
 
-def configure_position_limit(bus: recoil.Bus, device_id: int, lower_limit: float, upper_limit: float):
-    print("Position Lower Limit (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER, lower_limit)
-    print("Position Lower Limit (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER))
-
-    print("Position Upper Limit (before):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER))
-    bus._write_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER, upper_limit)
-    print("Position Upper Limit (updated):\t", bus._read_parameter_f32(device_id, recoil.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER))
+def configure_phase_order(bus: can.Bus, device_id: int, phase_order: int):
+    print("Phase order (before):\t", bus._read_parameter_i32(device_id, can.Parameter.MOTOR_PHASE_ORDER))
+    bus._write_parameter_i32(device_id, can.Parameter.MOTOR_PHASE_ORDER, phase_order)
+    print("Phase order (updated):\t", bus._read_parameter_i32(device_id, can.Parameter.MOTOR_PHASE_ORDER))
 
 
-def configure_current_bandwidth(bus: recoil.Bus, device_id: int, bandwidth: float, kp: float = 0.0001, ki: float = 0.000001):
-    print("Previous current kp:\t", bus._read_parameter_f32(device_id, recoil.Parameter.CURRENT_CONTROLLER_I_KP))
-    print("Previous current ki:\t", bus._read_parameter_f32(device_id, recoil.Parameter.CURRENT_CONTROLLER_I_KI))
+def configure_position_limit(bus: can.Bus, device_id: int, lower_limit: float, upper_limit: float):
+    print("Position Lower Limit (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER, lower_limit)
+    print("Position Lower Limit (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER))
 
-    bus.set_current_bandwidth(bandwidth, kp, ki)
+    print("Position Upper Limit (before):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER))
+    bus._write_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER, upper_limit)
+    print("Position Upper Limit (updated):\t", bus._read_parameter_f32(device_id, can.Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER))
 
-    print("New current kp:\t", bus._read_parameter_f32(device_id, recoil.Parameter.CURRENT_CONTROLLER_I_KP))
-    print("New current ki:\t", bus._read_parameter_f32(device_id, recoil.Parameter.CURRENT_CONTROLLER_I_KI))
+
+def configure_current_bandwidth(bus: can.Bus, device_id: int, bandwidth: float, kp: float = 0.0001, ki: float = 0.000001):
+    print("Previous current kp:\t", bus._read_parameter_f32(device_id, can.Parameter.CURRENT_CONTROLLER_I_KP))
+    print("Previous current ki:\t", bus._read_parameter_f32(device_id, can.Parameter.CURRENT_CONTROLLER_I_KI))
+
+    bus.set_current_bandwidth(device_id, bandwidth, kp, ki)
+
+    print("New current kp:\t", bus._read_parameter_f32(device_id, can.Parameter.CURRENT_CONTROLLER_I_KP))
+    print("New current ki:\t", bus._read_parameter_f32(device_id, can.Parameter.CURRENT_CONTROLLER_I_KI))
 
 
-def store_to_flash(bus: recoil.Bus, device_id: int):
-    bus.store_setting_to_flash(device_id)
+def store_to_flash(bus: can.Bus, device_id: int):
+    bus.store_settings_to_flash(device_id)
     print("Settings stored to flash!")
 
 

@@ -15,10 +15,10 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.terrains import TerrainImporter
 
 if TYPE_CHECKING:
-    from isaaclab.envs import RLTaskEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 def terrain_levels_vel(
-    env: RLTaskEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Curriculum based on the distance the robot walked when commanded to move at a desired velocity.
 
@@ -49,7 +49,7 @@ def terrain_levels_vel(
     return torch.mean(terrain.terrain_levels.float())
 
 def disturbance_levels_vel(
-    env: RLTaskEnv,
+    env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     reward_term_name: str = "track_lin_vel_xy_exp",
     initial_scale: float = 0.1,
