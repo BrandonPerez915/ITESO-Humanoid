@@ -1,35 +1,19 @@
-import os
-import sys
-from pathlib import Path
-
-# Ensure project root and src/ are in sys.path
-_repo_root = Path(__file__).resolve().parents[2]
-_src_dir = _repo_root / "src"
-for _path in [str(_repo_root), str(_src_dir)]:
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 import numpy as np
 import torch
 
-try:
-    from bhl.control.policy import RlController, Cfg
-    from bhl.envs.mujoco import MujocoSimulator
-except ImportError:
-    from src.iteh.control.policy.rl_controller import RlController
-    from src.environments.mujoco import MujocoSimulator, Cfg
-
+from iteh.policy import RlController, PolicyConfig
+from train.enviroments.mujoco_env import MujocoSimulator
 
 # Main execution block
 def main():
     """Main execution function for the MuJoCo simulation environment."""
     # Load configuration
-    cfg = Cfg.from_arguments()
+    cfg = PolicyConfig.from_arguments()
     if not cfg:
         raise ValueError("Failed to load config.")
 
     # Initialize environment
-    robot = MujocoSimulator(cfg)
+    robot = MujocoSimulator(cfg) # type: ignore
     obs = robot.reset()
 
     # Initialize and start policy controller
