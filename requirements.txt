@@ -6,3 +6,8 @@ onnxruntime
 cc.udp
 inputs
 pyaml
+
+pyserial
+python-can
+pynput
+tables
