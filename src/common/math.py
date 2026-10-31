@@ -1,11 +1,16 @@
 """
-math.py - Geometric and kinematic utilities for Berkeley Humanoid Lite.
+math.py - Geometric and kinematic utilities for ITESO Humanoid.
 """
 
+from typing import TYPE_CHECKING
 import numpy as np
 import torch
 
-def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+if TYPE_CHECKING:
+    from torch import Tensor
+    from numpy import ndarray as NArray
+
+def quat_rotate_inverse(q: Tensor, v: Tensor) -> Tensor:
     """Rotate a vector by the inverse of a quaternion (torch).
 
     Args:
@@ -22,8 +27,7 @@ def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     c = q_vec * (torch.dot(q_vec, v)) * 2.0
     return a - b + c
 
-
-def quat_rotate_inverse_np(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+def quat_rotate_inverse_np(q: NArray, v: NArray) -> NArray:
     """Rotate a vector by the inverse of a quaternion (numpy).
 
     Args:

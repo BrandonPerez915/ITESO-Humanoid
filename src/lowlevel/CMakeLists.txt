@@ -52,26 +52,23 @@ target_link_libraries(main yaml-cpp::yaml-cpp)
 
 # Torch (optional test)
 if(Torch_FOUND)
-  add_executable(test-torch tests/test-torch.cpp)
+  add_executable(test-torch tests/torch.cpp)
   target_link_libraries(test-torch "${TORCH_LIBRARIES}")
   set_property(TARGET test-torch PROPERTY CXX_STANDARD 17)
 endif()
 
-
 # IMU
-add_executable(test-imu tests/test-imu.cpp core/imu.cpp)
+add_executable(test-imu tests/imu.cpp core/imu.cpp)
 target_include_directories(test-imu PRIVATE core core/lib)
 set_property(TARGET test-imu PROPERTY CXX_STANDARD 17)
 
-
 # UDP
-add_executable(test-udp tests/test-udp.cpp core/udp.c)
+add_executable(test-udp tests/udp.cpp core/udp.c)
 target_include_directories(test-udp PRIVATE core core/lib)
 set_property(TARGET test-udp PROPERTY CXX_STANDARD 17)
 
-
 # YAML
-add_executable(test-yaml tests/test-yaml.cpp)
+add_executable(test-yaml tests/yaml.cpp)
 target_include_directories(test-yaml PRIVATE core core/lib)
 target_link_libraries(test-yaml yaml-cpp::yaml-cpp)
 set_property(TARGET test-yaml PROPERTY CXX_STANDARD 17)

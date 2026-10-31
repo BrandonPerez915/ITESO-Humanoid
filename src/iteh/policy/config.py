@@ -1,11 +1,7 @@
 from __future__ import annotations
-
 import argparse
 import os
 from omegaconf import DictConfig, ListConfig, OmegaConf
-from pathlib import Path
-
-from configs.paths import get_config_path, CONFIGS_DIR
 
 class PolicyConfig(DictConfig):
     """Configuration class holding simulation and robot parameters."""

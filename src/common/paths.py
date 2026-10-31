@@ -1,10 +1,9 @@
 """
-paths.py - Centralized repository path resolution for Berkeley Humanoid Lite.
+paths.py - Centralized repository path resolution for ITESO Humanoid.
 """
 
 import os
 from pathlib import Path
-from typing import Union
 
 # Repository root (where assets, configs, models, src live)
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -33,9 +32,9 @@ def get_urdf_path(biped: bool = False) -> Path:
 
 def get_usd_path(filename: str) -> Path:
     """Return path to USD file."""
-    custom_dir = os.environ.get("ISAACLAB_ASSET_DIR")
-    if custom_dir:
-        candidate = Path(custom_dir) / "usd" / filename
+    custom_path = os.environ.get("ISAACLAB_ASSET_DIR")
+    if custom_path:
+        candidate = Path(custom_path) / "usd" / filename
         if candidate.exists():
             return candidate
     return ASSETS_DIR / "usd" / filename
