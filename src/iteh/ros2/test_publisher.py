@@ -1,77 +1,103 @@
-#!/usr/bin/env python3
 """
-Simple ROS 2 publisher script to test ITESO Humanoid simulation control.
-Publishes Twist messages to /cmd_vel.
+ROS 2 Commander & Test Node for ITESO Humanoid.
+Demonstrates interacting with `HumanoidPolicyNode` inside the ROS 2 container via services and topics.
 """
 
-import sys
+from __future__ import annotations
+
 import time
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Int32
+from std_srvs.srv import Trigger
 
-try:
-    import rclpy
-    from rclpy.node import Node
-    from geometry_msgs.msg import Twist
-except ImportError:
-    print("[ERROR] 'rclpy' no está instalado en este entorno.")
-    print("Puedes probar con la terminal de ROS 2 directamente:")
-    print("  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3}}' -r 10")
-    sys.exit(1)
+from common.logging import get_logger
+
+log = get_logger("ros2.test")
 
 
 class CmdVelTestPublisher(Node):
-    def __init__(self):
-        super().__init__('bhl_cmd_vel_tester')
-        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
-        print("\n" + "=" * 55)
-        print("   PUBLICADOR DE PRUEBA ROS 2 -> /cmd_vel")
-        print("=" * 55)
-        print("Secuencia de prueba automática:")
-        print("  1. Caminar hacia adelante (Vx = 0.35 m/s) por 4s")
-        print("  2. Girar a la izquierda (Vyaw = 0.4 rad/s) por 4s")
-        print("  3. Detenerse (Vx = 0, Vyaw = 0)")
-        print("=" * 55 + "\n")
+    def __init__(self) -> None:
+        super().__init__("iteh_commander_node")
+        self.pub_vel = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.pub_mode = self.create_publisher(Int32, "/robot_mode", 10)
 
-    def send_velocity(self, vx=0.0, vy=0.0, vyaw=0.0):
+        self.cli_init = self.create_client(Trigger, "/iteh/set_mode_init")
+        self.cli_run = self.create_client(Trigger, "/iteh/set_mode_run")
+        self.cli_idle = self.create_client(Trigger, "/iteh/set_mode_idle")
+        self.cli_reset = self.create_client(Trigger, "/iteh/reset_policy")
+        self.cli_estop = self.create_client(Trigger, "/iteh/emergency_stop")
+
+        log.info("CmdVelTestPublisher initialized (automated test sequence towards HumanoidPolicyNode).")
+
+    def call_trigger(self, client, timeout_sec: float = 1.0) -> bool:
+        if not client.wait_for_service(timeout_sec=timeout_sec):
+            log.warning("Service %s unavailable, falling back to /robot_mode topic.", client.srv_name)
+            return False
+        req = Trigger.Request()
+        future = client.call_async(req)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout_sec)
+        if future.result() is not None:
+            res = future.result()
+            log.info("[%s] %s", client.srv_name, res.message)
+            return bool(res.success)
+        return False
+
+    def set_mode(self, mode: int) -> None:
+        msg = Int32()
+        msg.data = int(mode)
+        self.pub_mode.publish(msg)
+
+    def send_velocity(self, vx: float = 0.0, vy: float = 0.0, vyaw: float = 0.0) -> None:
         msg = Twist()
         msg.linear.x = float(vx)
         msg.linear.y = float(vy)
         msg.angular.z = float(vyaw)
-        self.publisher_.publish(msg)
+        self.pub_vel.publish(msg)
 
 
-def main():
-    rclpy.init()
+def run_test_publisher() -> None:
+    if not rclpy.ok():
+        rclpy.init()
     node = CmdVelTestPublisher()
 
     try:
-        # 1. Caminar hacia adelante
-        print("-> [1/3] Enviando: Caminar hacia adelante (Vx = 0.35 m/s)...")
+        log.info("[1/5] Initializing posture (RL_INIT)...")
+        if not node.call_trigger(node.cli_init):
+            node.set_mode(2)
+        time.sleep(2.2)
+
+        log.info("[2/5] Activating RL policy (RL_RUNNING)...")
+        if not node.call_trigger(node.cli_run):
+            node.set_mode(3)
+        time.sleep(0.5)
+
+        log.info("[3/5] Walking forward (Vx = 0.35 m/s)...")
         start = time.time()
         while time.time() - start < 4.0:
             node.send_velocity(vx=0.35)
             time.sleep(0.1)
 
-        # 2. Girar
-        print("-> [2/3] Enviando: Giro hacia la izquierda (Vyaw = 0.4 rad/s)...")
+        log.info("[4/5] Turning left (Vyaw = 0.4 rad/s)...")
         start = time.time()
         while time.time() - start < 4.0:
             node.send_velocity(vx=0.2, vyaw=0.4)
             time.sleep(0.1)
 
-        # 3. Detener
-        print("-> [3/3] Enviando: Detenerse...")
+        log.info("[5/5] Stopping robot and switching to IDLE...")
         for _ in range(5):
             node.send_velocity(vx=0.0, vy=0.0, vyaw=0.0)
             time.sleep(0.1)
+        if not node.call_trigger(node.cli_idle):
+            node.set_mode(1)
 
-        print("\n[OK] Secuencia de prueba completada exitosamente.")
+        log.info("Test sequence completed successfully.")
 
     except KeyboardInterrupt:
-        print("\nPrueba cancelada por el usuario.")
+        log.warning("Test cancelled by user. Triggering emergency stop.")
+        node.call_trigger(node.cli_estop)
     finally:
         node.destroy_node()
-        rclpy.shutdown()
-
-
-if __name__ == '__main__':
-    main()
+        if rclpy.ok():
+            rclpy.shutdown()
