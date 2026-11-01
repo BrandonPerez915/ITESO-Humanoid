@@ -14,6 +14,10 @@ import time
 import threading
 from typing import Dict
 
+from common.logging import get_logger, status_line
+
+log = get_logger("inputs.gamepad")
+
 try:
     import pygame
     PYGAME_AVAILABLE = True
@@ -76,23 +80,28 @@ class Se2Gamepad:
             "mode_switch": 0,
         }
 
+
     def reset(self) -> None:
         self._states = {key: 0 for key in XInputEntry.__dict__.values()}
+
 
     def _apply_deadzone(self, value: float) -> float:
         if abs(value) < self.dead_zone:
             return 0.0
         return value
 
+
     def stop(self) -> None:
-        print("Gamepad stopping...")
+        log.info("Gamepad stopping...")
         self._stopped.set()
         if self._run_forever_thread and self._run_forever_thread.is_alive():
             self._run_forever_thread.join(timeout=1.0)
 
+
     def run(self) -> None:
         self._run_forever_thread = threading.Thread(target=self.run_forever, daemon=True)
         self._run_forever_thread.start()
+
 
     def run_forever(self) -> None:
         # On macOS or when pygame is available, prefer pygame
@@ -102,15 +111,16 @@ class Se2Gamepad:
                 self._run_pygame()
                 return
             else:
-                print("[WARNING] Running on macOS but 'pygame' is not installed.")
-                print("[WARNING] Please install pygame (`pip install pygame` or `uv pip install pygame`) to use your gamepad.")
+                log.warning("Running on macOS but 'pygame' is not installed.")
+                log.warning("Please install pygame (`pip install pygame` or `uv pip install pygame`) to use your gamepad.")
 
         # Fallback to inputs on Linux / Windows
         if INPUTS_AVAILABLE:
             self.backend = "inputs"
             self._run_inputs()
         else:
-            print("[ERROR] Neither 'pygame' nor 'inputs' is available for gamepad control.")
+            log.error("Neither 'pygame' nor 'inputs' is available for gamepad control.")
+
 
     def _run_pygame(self) -> None:
         """Pygame-based gamepad handler (supports PS5 DualSense on macOS & cross-platform)."""
@@ -126,7 +136,7 @@ class Se2Gamepad:
                 if num_joysticks > 0:
                     joystick = pygame.joystick.Joystick(0)
                     joystick.init()
-                    print(f"[INFO] Gamepad detected via Pygame: {joystick.get_name()}")
+                    log.info("Gamepad detected via Pygame: %s", joystick.get_name())
                 else:
                     time.sleep(1.0)
                     continue
@@ -202,10 +212,11 @@ class Se2Gamepad:
 
             except Exception as e:
                 # Handle disconnection
-                print(f"[WARNING] Gamepad reading error: {e}")
+                log.warning("Gamepad reading error: %s", e)
                 joystick = None
 
             time.sleep(0.01)  # 100 Hz poll rate
+
 
     def _run_inputs(self) -> None:
         """Inputs library handler (Linux XInput)."""
@@ -217,6 +228,7 @@ class Se2Gamepad:
                 self._update_command_buffer_inputs()
             except Exception as e:
                 time.sleep(0.5)
+
 
     def _update_command_buffer_inputs(self) -> Dict[str, float]:
         velocity_x = self._states.get(XInputEntry.AXIS_Y_L)
@@ -277,31 +289,37 @@ class Se2Keyboard:
         self._stopped = threading.Event()
         self._thread = None
 
+
     def stop(self) -> None:
         self._stopped.set()
+
 
     def run(self) -> None:
         self.print_instructions()
         self._thread = threading.Thread(target=self._terminal_listener, daemon=True)
         self._thread.start()
 
+
     def print_instructions(self) -> None:
-        print("\n" + "=" * 62)
-        print("          BERKELEY HUMANOID LITE - CONTROL POR TECLADO")
-        print("=" * 62)
-        print("  W / Flecha Arriba   : Avanzar (aumentar velocidad adelante)")
-        print("  S / Flecha Abajo    : Retroceder / Frenar (velocidad atrás)")
-        print("  A / Flecha Izq      : Girar a la izquierda (Yaw +)")
-        print("  D / Flecha Der      : Girar a la derecha (Yaw -)")
-        print("  Q                   : Paso lateral a la izquierda (Strafe)")
-        print("  E                   : Paso lateral a la derecha (Strafe)")
-        print("  ESPACIO             : Frenar / Detener (Vx=0, Vy=0, Vyaw=0)")
-        print("  3                   : Modo RL Running (Caminar)")
-        print("  2                   : Modo RL Init (Postura inicial)")
-        print("  1                   : Modo Reposo (Idle)")
-        print("=" * 62)
-        print("  * Puedes presionar las teclas en la ventana 3D de MuJoCo")
-        print("    o directamente en esta terminal.\n")
+        log.info(
+            "\n" + "=" * 62 + "\n"
+            "          BERKELEY HUMANOID LITE - KEYBOARD CONTROL\n"
+            + "=" * 62 + "\n"
+            "  W / Up Arrow        : Forward (increase forward velocity)\n"
+            "  S / Down Arrow      : Backward / Brake (backward velocity)\n"
+            "  A / Left Arrow      : Turn left (Yaw +)\n"
+            "  D / Right Arrow     : Turn right (Yaw -)\n"
+            "  Q                   : Strafe left\n"
+            "  E                   : Strafe right\n"
+            "  SPACE               : Brake / Stop (Vx=0, Vy=0, Vyaw=0)\n"
+            "  3                   : RL Running Mode (Walk)\n"
+            "  2                   : RL Init Mode (Initial posture)\n"
+            "  1                   : Idle Mode\n"
+            + "=" * 62 + "\n"
+            "  * You can press the keys in the MuJoCo 3D window\n"
+            "    or directly in this terminal."
+        )
+
 
     def handle_char(self, char: str) -> None:
         char = char.lower()
@@ -327,15 +345,15 @@ class Se2Keyboard:
             vyaw = 0.0
         elif char == '1':
             self.commands["mode_switch"] = 1
-            print(f"\n[TECLADO] Modo cambiado a: 1 (IDLE)")
+            log.info("[KEYBOARD] Mode changed to: 1 (IDLE)")
             return
         elif char == '2':
             self.commands["mode_switch"] = 2
-            print(f"\n[TECLADO] Modo cambiado a: 2 (INIT)")
+            log.info("[KEYBOARD] Mode changed to: 2 (INIT)")
             return
         elif char == '3':
             self.commands["mode_switch"] = 3
-            print(f"\n[TECLADO] Modo cambiado a: 3 (RL RUNNING)")
+            log.info("[KEYBOARD] Mode changed to: 3 (RL RUNNING)")
             return
         else:
             return
@@ -343,7 +361,10 @@ class Se2Keyboard:
         self.commands["velocity_x"] = round(vx, 2)
         self.commands["velocity_y"] = round(vy, 2)
         self.commands["velocity_yaw"] = round(vyaw, 2)
-        print(f"\r[TECLADO] Vx: {self.commands['velocity_x']:+.2f} m/s | Vy: {self.commands['velocity_y']:+.2f} m/s | Vyaw: {self.commands['velocity_yaw']:+.2f} rad/s    ", end="", flush=True)
+        status_line(
+            f"[KEYBOARD] Vx: {self.commands['velocity_x']:+.2f} m/s | Vy: {self.commands['velocity_y']:+.2f} m/s | Vyaw: {self.commands['velocity_yaw']:+.2f} rad/s",
+        )
+
 
     def handle_key(self, keycode: int) -> None:
         """Handle key event from MuJoCo viewer callback."""
@@ -368,6 +389,7 @@ class Se2Keyboard:
             self.handle_char('2')
         elif keycode == ord('3'):
             self.handle_char('3')
+
 
     def _terminal_listener(self) -> None:
         """Reads characters from stdin in the terminal (non-blocking)."""
@@ -403,16 +425,3 @@ class Se2Keyboard:
             except Exception:
                 pass
 
-
-if __name__ == "__main__":
-    print("Testing Keyboard Controller...")
-    kb = Se2Keyboard()
-    kb.run()
-
-    try:
-        while True:
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("\nStopping...")
-
-    kb.stop()
