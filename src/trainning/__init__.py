@@ -1,3 +1,8 @@
 """Training tasks, environments, and MDP definitions for Berkeley Humanoid Lite."""
 
-from . import configs  # noqa: F401
+
+def __getattr__(name: str):
+    if name == "configs":
+        import importlib
+        return importlib.import_module("trainning.configs")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

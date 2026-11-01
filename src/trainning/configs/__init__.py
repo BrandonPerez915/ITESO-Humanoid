@@ -2,20 +2,29 @@
 
 import gymnasium as gym
 
-import src.trainning.configs.biped_rsl as biped
-import src.trainning.configs.humanoid_rsl as humanoid
-import src.trainning.configs.robot as robot
+import trainning.configs.biped_rsl as biped
+import trainning.configs.humanoid_rsl as humanoid
+import trainning.configs.robot as robot
 
-import src.trainning.configs.enviroments.robust as robust_env
-import src.trainning.configs.enviroments.base as base_env
-import src.trainning.configs.enviroments.velocity as velocity_env
+import trainning.configs.enviroments.robust as robust_env
+import trainning.configs.enviroments.base as base_env
+import trainning.configs.enviroments.velocity as velocity_env
+
+__all__ = [
+    "biped",
+    "humanoid",
+    "robot",
+    "robust_env",
+    "base_env",
+    "velocity_env",
+]
 
 gym.register(
     id="Velocity-Berkeley-Humanoid-Lite-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.enviroment:BerkeleyHumanoidLiteEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.enviroments.base:BerkeleyHumanoidLiteEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.humanoid_rsl:HumanoidPPORunnerConfig",
     },
 )
@@ -25,7 +34,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.enviroment:BerkeleyHumanoidLiteBipedEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.enviroments.base:BerkeleyHumanoidLiteBipedEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.biped_rsl:BipedPPORunnerConfig",
     },
 )
@@ -35,7 +44,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.robust_enviroment:BerkeleyHumanoidLiteRobustEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.enviroments.robust:BerkeleyHumanoidLiteRobustEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.humanoid_rsl:BerkeleyHumanoidLiteRobustPPORunnerCfg",
     },
 )
@@ -45,7 +54,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.robust_enviroment:BerkeleyHumanoidLiteLegsRobustEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.enviroments.robust:BerkeleyHumanoidLiteLegsRobustEnvCfg",
         "rsl_rl_cfg_entry_point": f"{__name__}.humanoid_rsl:BerkeleyHumanoidLiteLegsRobustPPORunnerCfg",
     },
 )
