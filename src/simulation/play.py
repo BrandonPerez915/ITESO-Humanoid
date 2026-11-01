@@ -1,47 +1,43 @@
 import numpy as np
 import torch
 
-from src.iteh.policy import RlController, PolicyConfig
-from src.simulation.mujoco import MujocoSimulator
+from common.logging import get_logger
+from iteh.policy import PolicyConfig, RlController
+from simulation.mjpython import ensure_mjpython
+from simulation.mujoco import MujocoSimulator
 
-# Main execution block
-def main():
-    """Main execution function for the MuJoCo simulation environment."""
-    # Load configuration
-    cfg = PolicyConfig.from_arguments()
+log = get_logger("sim.play")
+
+
+def run_play(config_name: str = "biped_25hz.yaml", control_mode: str = "keyboard") -> None:
+    """Run the MuJoCo simulation environment with the specified policy and control mode."""
+    ensure_mjpython()
+    cfg = PolicyConfig.load(config_name=config_name, control_mode=control_mode)
     if not cfg:
         raise ValueError("Failed to load config.")
 
-    # Initialize environment
-    robot = MujocoSimulator(cfg) # type: ignore
+    robot = MujocoSimulator(cfg)  # type: ignore
     obs = robot.reset()
 
-    # Initialize and start policy controller
     controller = RlController(cfg)
     controller.load_policy()
 
-    # Default actions for fallback
     default_actions = np.array(cfg.default_joint_positions, dtype=np.float32)[robot.cfg.action_indices]
 
-    # Main control loop
+    log.info("Starting MuJoCo simulation main loop (control=%s)...", control_mode)
     try:
         while robot.mj_viewer.is_running():
-            # Send observations and receive actions
-            actions = controller.update(obs.numpy())
+            actions = robot.get_remote_actions()
+            if actions is None:
+                actions = controller.update(obs.numpy())
 
-            # Use default actions if no actions received
             if actions is None:
                 actions = default_actions
 
-            # Execute step
-            actions = torch.tensor(actions)
-            obs = robot.step(actions)
+            actions_tensor = torch.tensor(actions, dtype=torch.float32)
+            obs = robot.step(actions_tensor)
     except KeyboardInterrupt:
-        print("\n[INFO] Simulación detenida por el usuario.")
+        log.info("Simulation stopped by user.")
     finally:
         robot.command_controller.stop()
-        print("[INFO] Simulación finalizada limpiamente.")
-
-
-if __name__ == "__main__":
-    main()
+        log.info("Simulation finished cleanly.")
