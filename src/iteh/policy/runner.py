@@ -4,21 +4,21 @@
 RL Runner for ITESO Humanoid
 
 This module implements a policy runner that executes trained policies (PyTorch or ONNX)
-for controlling the ITESO Humanoid robot. It handles UDP communication for
-receiving observations and sending actions to the robot.
+for controlling the ITESO Humanoid robot.
 """
 
-from typing import Union
 from abc import ABC, abstractmethod
+from typing import Union
 import numpy as np
 from omegaconf import DictConfig, ListConfig
-import torch
 import onnxruntime as ort
+import torch
 
-try:
-    from common import math
-except ImportError:
-    from src.common import math
+from common import math
+from common.logging import get_logger
+from common.paths import get_model_path
+
+log = get_logger("policy.runner")
 
 
 class Policy(ABC):
@@ -74,7 +74,7 @@ class RlController:
     A class to run trained policies for the ITESO Humanoid robot.
 
     This class handles the execution of trained policies (PyTorch or ONNX format),
-    processes robot observations, and sends control commands via UDP communication.
+    processes robot observations, and computes scaled target joint actions.
     """
 
     @staticmethod
@@ -132,36 +132,30 @@ class RlController:
         self.policy_observations.fill(0.0)
         self.policy_actions.fill(0.0)
         self.prev_actions.fill(0.0)
+        log.debug("Observation history and action buffers reset.")
 
     def load_policy(self) -> None:
         """
         Load the policy model (PyTorch or ONNX)
         """
-        from common.paths import get_model_path
         model_checkpoint_path = str(get_model_path(self.config.policy_checkpoint_path))
 
         # Determine policy format and load appropriate model
         if ".pt" in model_checkpoint_path:
             torch.set_printoptions(precision=2)
             self.policy = TorchPolicy(model_checkpoint_path)
-            print("Using Torch runner")
+            log.info("Policy loaded with TorchPolicy: %s", model_checkpoint_path)
 
         elif ".onnx" in model_checkpoint_path:
             self.policy = OnnxPolicy(model_checkpoint_path)
-            print("Using ONNX runner")
+            log.info("Policy loaded with OnnxPolicy: %s", model_checkpoint_path)
 
         else:
-            raise ValueError("Unrecognized policy format")
+            raise ValueError(f"Unrecognized policy format: {model_checkpoint_path}")
 
     def update(self, robot_observations: np.ndarray) -> np.ndarray:
         """
-        Run the policy execution loop.
-
-        This method:
-        1. Loads the policy model (PyTorch or ONNX)
-        2. Sets up UDP communication
-        3. Runs the main control loop
-        4. Logs experiment data
+        Run a single policy inference step.
 
         Args:
             robot_observations (np.ndarray): Observations from the robot low-level controller
@@ -169,13 +163,11 @@ class RlController:
         Returns:
             np.ndarray: Actions to send to the robot
         """
-
-        # Parse UDP observations
+        # Parse observations
         robot_base_quat = robot_observations[0:4]
         robot_base_ang_vel = robot_observations[4:7]
         robot_joint_pos = robot_observations[7:7 + self.config.num_actions] - self.default_joint_positions
         robot_joint_vel = robot_observations[7 + self.config.num_actions:7 + self.config.num_actions * 2]
-        # robot_mode = robot_observations[7 + self.config.num_actions * 2]
         command_velocity = robot_observations[7 + self.config.num_actions * 2 + 1:7 + self.config.num_actions * 2 + 4]
 
         # Process observations
@@ -206,20 +198,12 @@ class RlController:
         self.policy_actions[:] = self.policy.forward(self.policy_observations)
 
         # Process and scale actions
-        policy_actions_clipped = np.clip(self.policy_actions[0],
-                                         self.config.action_limit_lower,
-                                         self.config.action_limit_upper)
+        policy_actions_clipped = np.clip(
+            self.policy_actions[0],
+            self.config.action_limit_lower,
+            self.config.action_limit_upper,
+        )
         self.prev_actions[:] = policy_actions_clipped
 
         policy_actions_scaled = policy_actions_clipped * self.config.action_scale + self.default_joint_positions
-
-        # # Log data
-        # data_log.append(np.concatenate([[time.time()], policy_observations.flatten()]).tolist())
-        # counter += 1
-
-        # # Save experiment data
-        # with open("data_log.json", "w") as f:
-        #     json.dump(data_log, f)
-        # print("Written experiment data to ./data_log.json")
-
         return policy_actions_scaled

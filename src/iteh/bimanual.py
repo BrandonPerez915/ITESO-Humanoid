@@ -5,8 +5,11 @@ import time
 import serial
 import numpy as np
 
-import src.iteh.communication.core as Can
-import src.iteh.communication.flags as CanFlags
+from common.logging import get_logger
+import iteh.communication.core as Can
+import iteh.communication.flags as CanFlags
+
+log = get_logger("robot.bimanual")
 
 class Bimanual:
     def __init__(self):
@@ -59,11 +62,10 @@ class Bimanual:
         for i, entry in enumerate(self.joints):
             bus, device_id, joint_name = entry
 
-            print(f"Initializing joint {joint_name}:")
-            print(f"  kp: {self.joint_kp[i]}, kd: {self.joint_kd[i]}, torque limit: {self.torque_limit[i]}")
+            log.info("Initializing joint %s: kp=%s, kd=%s, torque_limit=%s", joint_name, self.joint_kp[i], self.joint_kd[i], self.torque_limit[i])
 
             # Set the joint mode to idle
-            bus.set_mode(device_id, Can.ModeFlag.IDLE)
+            bus.set_mode(device_id, CanFlags.ModeFlag.IDLE)
             time.sleep(0.001)
             bus.write_position_kp(device_id, self.joint_kp[i])
             time.sleep(0.001)
@@ -76,21 +78,20 @@ class Bimanual:
 
             self.position_offsets[i] = bus.read_position_measured(device_id) * self.joint_axis_directions[i]
 
-        print("Motors enabled")
-        print(self.position_offsets)
+        log.info("Motors enabled. Offsets: %s", self.position_offsets)
 
     def stop(self):
         for entry in self.joints:
             bus, device_id, _ = entry
             bus.set_mode(device_id, CanFlags.ModeFlag.DAMPING)
 
-        print("Entered damping mode. Press Ctrl+C again to exit.\n")
+        log.info("Entered damping mode. Press Ctrl+C again to exit.")
 
         try:
             while True:
                 pass
         except KeyboardInterrupt:
-            print("Exiting damping mode.")
+            log.info("Exiting damping mode.")
 
         for entry in self.joints:
             bus, device_id, _ = entry
@@ -165,10 +166,9 @@ class Bimanual:
     def check_connection(self):
         for entry in self.joints:
             bus, device_id, joint_name = entry
-            print(f"Pinging {joint_name} ... ", end="\t")
             result = bus.ping(device_id)
             if result:
-                print("OK")
+                log.info("Pinging %s ... OK", joint_name)
             else:
-                print("ERROR")
+                log.error("Pinging %s ... ERROR", joint_name)
             time.sleep(0.1)

@@ -4,11 +4,14 @@ import time
 from omegaconf import OmegaConf, DictConfig
 import numpy as np
 
-from src.common.paths import get_config_path
-import src.iteh.communication.core as Can
-import src.iteh.communication.flags as CanFlags
-from src.iteh.robot.imu import SerialImu, Baudrate
-from src.iteh.inputs.gamepad import Se2Gamepad
+from common.logging import get_logger, status_line
+from common.paths import get_config_path
+import iteh.communication.core as Can
+import iteh.communication.flags as CanFlags
+from iteh.imu import SerialImu, Baudrate
+from iteh.inputs.gamepad import Se2Gamepad
+
+log = get_logger("robot.humanoid")
 
 class State:
     INVALID = 0
@@ -132,8 +135,7 @@ class Humanoid:
         for i, entry in enumerate(self.joints):
             bus, device_id, joint_name = entry
 
-            print(f"Initializing joint {joint_name}:")
-            print(f"  kp: {self.joint_kp[i]}, kd: {self.joint_kd[i]}, torque limit: {self.torque_limit[i]}")
+            log.info("Initializing joint %s: kp=%s, kd=%s, torque_limit=%s", joint_name, self.joint_kp[i], self.joint_kd[i], self.torque_limit[i])
 
             # Set the joint mode to idle
             bus.set_mode(device_id, CanFlags.ModeFlag.IDLE)
@@ -147,7 +149,7 @@ class Humanoid:
             bus.feed(device_id)
             bus.set_mode(device_id, CanFlags.ModeFlag.DAMPING)
 
-        print("Motors enabled")
+        log.info("Motors enabled")
 
     def stop(self):
         self.imu.stop()
@@ -157,13 +159,13 @@ class Humanoid:
             bus, device_id, _ = entry
             bus.set_mode(device_id, CanFlags.ModeFlag.DAMPING)
 
-        print("Entered damping mode. Press Ctrl+C again to exit.\n")
+        log.info("Entered damping mode. Press Ctrl+C again to exit.")
 
         try:
             while True:
                 pass
         except KeyboardInterrupt:
-            print("Exiting damping mode.")
+            log.info("Exiting damping mode.")
 
         for entry in self.joints:
             bus, device_id, _ = entry
@@ -242,7 +244,7 @@ class Humanoid:
             self.joint_position_target[:] = self.joint_position_measured[:]
 
             if self.next_state == State.RL_INIT:
-                print("Switching to RL initialization mode")
+                log.info("Switching to RL initialization mode")
                 self.state = self.next_state
 
                 for entry in self.joints:
@@ -254,7 +256,7 @@ class Humanoid:
                 self.init_percentage = 0.0
 
         elif self.state == State.RL_INIT:
-            print(f"init: {self.init_percentage:.2f}")
+            log.debug("init: %.2f", self.init_percentage)
             if self.init_percentage < 1.0:
                 self.init_percentage += 1 / 100.0
                 self.init_percentage = min(self.init_percentage, 1.0)
@@ -262,11 +264,11 @@ class Humanoid:
                 self.joint_position_target = linear_interpolate(self.starting_positions, self.rl_init_positions, self.init_percentage)
             else:
                 if self.next_state == State.RL_RUNNING:
-                    print("Switching to RL running mode")
+                    log.info("Switching to RL running mode")
                     self.state = self.next_state
 
                 if self.next_state == State.IDLE:
-                    print("Switching to idle mode")
+                    log.info("Switching to idle mode")
                     self.state = self.next_state
 
                     for entry in self.joints:
@@ -278,7 +280,7 @@ class Humanoid:
                 self.joint_position_target[i] = actions[i]
 
             if self.next_state == State.IDLE:
-                print("Switching to idle mode")
+                log.info("Switching to idle mode")
                 self.state = self.next_state
 
                 for entry in self.joints:
@@ -294,10 +296,9 @@ class Humanoid:
     def check_connection(self):
         for entry in self.joints:
             bus, device_id, joint_name = entry
-            print(f"Pinging {joint_name} ... ", end="\t")
             result = bus.ping(device_id)
             if result:
-                print("OK")
+                log.info("Pinging %s ... OK", joint_name)
             else:
-                print("ERROR")
+                log.error("Pinging %s ... ERROR", joint_name)
             time.sleep(0.1)
