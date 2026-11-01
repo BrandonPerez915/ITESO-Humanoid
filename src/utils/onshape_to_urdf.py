@@ -1,52 +1,44 @@
-# generate URDF file from onshape CAD project
+"""Generate URDF file from Onshape CAD project."""
 
-import argparse
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
 import shutil
 
+from common.logging import get_logger
+from common.paths import REPO_ROOT
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Script to generate URDF file from onshape CAD project.",
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        help="Path to the config file.",
-        default="assets/urdf/config.json",
-    )
-    args = parser.parse_args()
+log = get_logger("assets.onshape_urdf")
 
-    # check if the config file exists
-    config_file_path = Path(args.config)
+
+def export_onshape_to_urdf(config_path: str = "assets/urdf/config.json") -> Path:
+    """Export an Onshape CAD assembly to URDF."""
+    config_file_path = Path(config_path)
     if not config_file_path.exists():
-        fallback_path = Path(__file__).resolve().parents[3] / "assets" / "urdf" / "config.json"
+        fallback_path = REPO_ROOT / config_path
         if fallback_path.exists():
             config_file_path = fallback_path
         else:
             raise FileNotFoundError(f"Config file {config_file_path} does not exist!")
 
-    robot_name = json.load(open(config_file_path))["output_filename"]
+    with open(config_file_path, "r") as f:
+        robot_name = json.load(f)["output_filename"]
+
     urdf_dir = config_file_path.parent
     robot_dir = urdf_dir.parent
     scad_dir = robot_dir / "scad"
 
-    # copy all the predefined scad files to the urdf assets directory
-    # for onshape-to-robot to generate custom colliders
     if scad_dir.exists():
-        # Create assets directory if it doesn't exist
         assets_dir = urdf_dir / "assets"
         assets_dir.mkdir(exist_ok=True)
-
         for file in scad_dir.iterdir():
             shutil.copy(file, assets_dir / file.name)
 
-    # invoke onshape-to-robot to generate the urdf file
+    log.info("Ejecutando onshape-to-robot en %s...", urdf_dir)
     os.system(f"onshape-to-robot {urdf_dir}")
 
-    # copy everything under merged/ directory to the assets directory
     if (urdf_dir / "assets" / "merged").exists():
         shutil.copytree(
             urdf_dir / "assets" / "merged",
@@ -54,14 +46,17 @@ if __name__ == "__main__":
             dirs_exist_ok=True,
         )
 
-    # delete the assets directory
-    shutil.rmtree(urdf_dir / "assets")
+    if (urdf_dir / "assets").exists():
+        shutil.rmtree(urdf_dir / "assets")
 
-    # modify the urdf to use the mesh from the parent meshes directory
-    with open(urdf_dir / f"{robot_name}.urdf", "r") as file:
+    output_urdf = urdf_dir / f"{robot_name}.urdf"
+    with open(output_urdf, "r") as file:
         content = file.read()
 
     content = content.replace("assets/merged/", "../meshes/")
 
-    with open(urdf_dir / f"{robot_name}.urdf", "w") as file:
+    with open(output_urdf, "w") as file:
         file.write(content)
+
+    log.info("URDF successfully generated at: %s", output_urdf)
+    return output_urdf

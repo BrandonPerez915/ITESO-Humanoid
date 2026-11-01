@@ -1,69 +1,18 @@
-# generate MJCF file from onshape CAD project
+"""Generate MJCF file from Onshape CAD project."""
 
-import argparse
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
 import shutil
 
+from common.logging import get_logger
+from common.paths import REPO_ROOT
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Script to generate URDF file from onshape CAD project.",
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        help="Path to the config file.",
-        default="assets/mjcf/config.json",
-    )
-    args = parser.parse_args()
+log = get_logger("assets.onshape_mjcf")
 
-    # check if the config file exists
-    config_file_path = Path(args.config)
-    if not config_file_path.exists():
-        fallback_path = Path(__file__).resolve().parents[3] / "assets" / "mjcf" / "config.json"
-        if fallback_path.exists():
-            config_file_path = fallback_path
-        else:
-            raise FileNotFoundError(f"Config file {config_file_path} does not exist!")
-
-    robot_name = json.load(open(config_file_path))["output_filename"]
-    mjcf_dir = config_file_path.parent
-    robot_dir = mjcf_dir.parent
-    scad_dir = robot_dir / "scad"
-
-    # copy all the predefined scad files to the mjcf assets directory
-    # for onshape-to-robot to generate custom colliders
-    if scad_dir.exists():
-        # Create assets directory if it doesn't exist
-        assets_dir = mjcf_dir / "assets"
-        assets_dir.mkdir(exist_ok=True)
-
-        for file in scad_dir.iterdir():
-            shutil.copy(file, assets_dir / file.name)
-
-    # invoke onshape-to-robot to generate the mjcf file
-    os.system(f"onshape-to-robot {mjcf_dir}")
-
-    # copy everything under merged/ directory to the assets directory
-    if (mjcf_dir / "assets" / "merged").exists():
-        shutil.copytree(
-            mjcf_dir / "assets" / "merged",
-            robot_dir / "meshes",
-            dirs_exist_ok=True,
-        )
-
-    # delete the assets directory
-    shutil.rmtree(mjcf_dir / "assets")
-
-    # modify the mjcf to use the mesh from the parent meshes directory
-    with open(mjcf_dir / f"{robot_name}.xml", "r") as file:
-        content = file.read()
-
-    content = content.replace("assets/merged/", "../meshes/")
-
-    content = content.replace("</actuator>", """</actuator>
+_SENSOR_BLOCK = """</actuator>
 
   <sensor>
     <jointpos name="arm_left_shoulder_pitch_pos"  joint="arm_left_shoulder_pitch_joint"/>
@@ -140,7 +89,54 @@ if __name__ == "__main__":
     <accelerometer name="imu_acc" site="imu" />
     <framepos name="frame_pos" objtype="site" objname="imu" />
     <framelinvel name="frame_vel" objtype="site" objname="imu" />
-  </sensor>""")
+  </sensor>"""
 
-    with open(mjcf_dir / f"{robot_name}.xml", "w") as file:
+
+def export_onshape_to_mjcf(config_path: str = "assets/mjcf/config.json") -> Path:
+    """Export an Onshape CAD assembly to MJCF XML."""
+    config_file_path = Path(config_path)
+    if not config_file_path.exists():
+        fallback_path = REPO_ROOT / config_path
+        if fallback_path.exists():
+            config_file_path = fallback_path
+        else:
+            raise FileNotFoundError(f"Config file {config_file_path} does not exist!")
+
+    with open(config_file_path, "r") as f:
+        robot_name = json.load(f)["output_filename"]
+
+    mjcf_dir = config_file_path.parent
+    robot_dir = mjcf_dir.parent
+    scad_dir = robot_dir / "scad"
+
+    if scad_dir.exists():
+        assets_dir = mjcf_dir / "assets"
+        assets_dir.mkdir(exist_ok=True)
+        for file in scad_dir.iterdir():
+            shutil.copy(file, assets_dir / file.name)
+
+    log.info("Ejecutando onshape-to-robot en %s...", mjcf_dir)
+    os.system(f"onshape-to-robot {mjcf_dir}")
+
+    if (mjcf_dir / "assets" / "merged").exists():
+        shutil.copytree(
+            mjcf_dir / "assets" / "merged",
+            robot_dir / "meshes",
+            dirs_exist_ok=True,
+        )
+
+    if (mjcf_dir / "assets").exists():
+        shutil.rmtree(mjcf_dir / "assets")
+
+    output_xml = mjcf_dir / f"{robot_name}.xml"
+    with open(output_xml, "r") as file:
+        content = file.read()
+
+    content = content.replace("assets/merged/", "../meshes/")
+    content = content.replace("</actuator>", _SENSOR_BLOCK)
+
+    with open(output_xml, "w") as file:
         file.write(content)
+
+    log.info("MJCF successfully generated at: %s", output_xml)
+    return output_xml

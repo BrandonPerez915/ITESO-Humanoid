@@ -1,29 +1,35 @@
-import argparse
+"""Post-process exported URDF and MJCF files."""
+
+from __future__ import annotations
+
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+from common.logging import get_logger
+from common.paths import REPO_ROOT
+
+log = get_logger("assets.postprocess")
 
 
-def postprocess_urdf(name):
+def postprocess_urdf(name: str = "berkeley-humanoid-lite") -> Path:
     urdf_path = Path(f"data/urdf/{name}.urdf")
     if not urdf_path.exists():
-        urdf_path = _REPO_ROOT / "assets" / "urdf" / f"{name}.urdf"
+        urdf_path = REPO_ROOT / "assets" / "urdf" / f"{name}.urdf"
     with open(urdf_path, "r") as f:
         content = f.read()
 
-    # update URDF mesh directory
     content = content.replace("package://", "./")
 
     with open(urdf_path, "w") as f:
         f.write(content)
-    
-    print("Postprocessing URDF complete")
+
+    log.info("URDF post-processing completed: %s", urdf_path)
+    return urdf_path
 
 
-def postprocess_mjcf(name):
+def postprocess_mjcf(name: str = "berkeley-humanoid-lite") -> Path:
     mjcf_path = Path(f"data/mjcf/{name}.xml")
     if not mjcf_path.exists():
-        mjcf_path = _REPO_ROOT / "assets" / "mjcf" / f"{name}.xml"
+        mjcf_path = REPO_ROOT / "assets" / "mjcf" / f"{name}.xml"
     with open(mjcf_path, "r") as f:
         content = f.read()
 
@@ -105,23 +111,10 @@ def postprocess_mjcf(name):
     <framelinvel name="frame_vel" objtype="site" objname="imu" />
   </sensor>
 """
-    content = content.replace("<equality/>", sensor_content+"<equality/>")
+    content = content.replace("<equality/>", sensor_content + "<equality/>")
 
     with open(mjcf_path, "w") as f:
         f.write(content)
-    
-    print("Postprocessing MJCF complete")
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, default="urdf")
-    parser.add_argument("--name", type=str, default="berkeley-humanoid-lite")
-    args = parser.parse_args()
-
-    if args.mode == "urdf":
-        postprocess_urdf(args.name)
-    elif args.mode == "mjcf":
-        postprocess_mjcf(args.name)
-    else:
-        raise ValueError("Invalid mode: {0}".format(args.mode))
+    log.info("MJCF post-processing completed: %s", mjcf_path)
+    return mjcf_path
