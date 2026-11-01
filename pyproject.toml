@@ -35,6 +35,12 @@ assets = [
   "onshape-to-robot",
   "pymeshlab==2023.12.post3",
 ]
+ros = [
+  "roslibpy",
+]
+
+[project.scripts]
+iteh = "iteh.cli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

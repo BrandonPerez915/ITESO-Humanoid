@@ -3,19 +3,33 @@ paths.py - Centralized repository path resolution for ITESO Humanoid.
 """
 
 import os
+import sys
 from pathlib import Path
 
-# Repository root (where assets, configs, models, src live)
+# Repository root (where assets, configs, models, logs, src live)
 REPO_ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = REPO_ROOT / "src"
+
+# Ensure both SRC_DIR and REPO_ROOT are importable regardless of how Python was invoked
+for path in (str(SRC_DIR), str(REPO_ROOT)):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 ASSETS_DIR = REPO_ROOT / "assets"
 MODELS_DIR = REPO_ROOT / "models"
 CONFIGS_DIR = REPO_ROOT / "configs"
-SCRIPTS_DIR = REPO_ROOT / "src" / "scripts"
+LOGS_DIR = Path(os.environ.get("ITEH_LOG_DIR", str(REPO_ROOT / "logs")))
+
+
+def get_logs_dir(*subpaths: str) -> Path:
+    """Return path inside the centralized logs directory (<REPO_ROOT>/logs)."""
+    return LOGS_DIR.joinpath(*subpaths)
+
 
 def get_asset_path(*subpaths: str) -> Path:
     """Return absolute path within assets directory."""
     return ASSETS_DIR.joinpath(*subpaths)
+
 
 def get_mjcf_path(biped: bool = False, scene: bool = True) -> Path:
     """Return path to MJCF XML file."""
@@ -25,10 +39,12 @@ def get_mjcf_path(biped: bool = False, scene: bool = True) -> Path:
         filename = "bhl_scene.xml" if scene else "berkeley_humanoid_lite.xml"
     return ASSETS_DIR / "mjcf" / filename
 
+
 def get_urdf_path(biped: bool = False) -> Path:
     """Return path to URDF file."""
     filename = "berkeley_humanoid_lite_biped.urdf" if biped else "berkeley_humanoid_lite.urdf"
     return ASSETS_DIR / "urdf" / filename
+
 
 def get_usd_path(filename: str) -> Path:
     """Return path to USD file."""
@@ -38,6 +54,7 @@ def get_usd_path(filename: str) -> Path:
         if candidate.exists():
             return candidate
     return ASSETS_DIR / "usd" / filename
+
 
 def get_model_path(model_name: str) -> Path:
     """
@@ -77,6 +94,7 @@ def get_model_path(model_name: str) -> Path:
         return candidate_legacy
 
     return MODELS_DIR / path_obj.name
+
 
 def get_config_path(config_name: str) -> Path:
     """Find and return path to configuration YAML or JSON."""
